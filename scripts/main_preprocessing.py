@@ -82,20 +82,20 @@ def preprocessing_alert_folders(topic_path):
 
 
     # After renaming the columns, preprocess the alerts based on some criteria
-	# Select the objectIds (transients) that have more than or equal to three alerts in atleast one passband/filter.
-	# Note that we mean more than three alerts in the time period in which the alerts are captured and not from the start of the survey.
-	# See notes above.
-	# For requiring three rather than two alerts, it's because if there are one or two alerts, you can fit anything to them with good accuracy.
-	# Only when you have three points or more, can we fit something meaningful.
-	df_alerts = df_alerts.groupby('objectId').filter(
-		lambda group: (len(group[group['fid'] == 1]) >= 3) or (len(group[group['fid'] == 2]) >= 3)
-	)
+    # Select the objectIds (transients) that have more than or equal to three alerts in atleast one passband/filter.
+    # Note that we mean more than three alerts in the time period in which the alerts are captured and not from the start of the survey.
+    # See notes above.
+    # For requiring three rather than two alerts, it's because if there are one or two alerts, you can fit anything to them with good accuracy.
+    # Only when you have three points or more, can we fit something meaningful.
+    df_alerts = df_alerts.groupby('objectId').filter(
+        lambda group: (len(group[group['fid'] == 1]) >= 3) or (len(group[group['fid'] == 2]) >= 3)
+    )
 
-	print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
+    print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
 
-	for objectId in df_alerts['objectId'].unique():
-		pdf = df_alerts[df_alerts['objectId'] == objectId]
-		assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
+    for objectId in df_alerts['objectId'].unique():
+        pdf = df_alerts[df_alerts['objectId'] == objectId]
+        assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
@@ -105,24 +105,28 @@ def preprocessing_alert_folders(topic_path):
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
 df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}')
 
-data_obj = prepare_data(df_alerts, dim=2)
+data_obj = prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32)
 
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')
 torch.save(data_obj["val_dataloader"], 'val_dataloader.pth')
-np.save('final_data.npy', data_obj["final_data"])
-np.save('final_objIds.npy', data_obj["final_objIds"])
-np.save('final_objIds_encoded.npy', data_obj["final_objIds_encoded"])
+np.save('total_objIds.npy', data_obj["total_objIds"])
+np.save('train_objIds.npy', data_obj["train_objIds"])
+np.save('val_objIds.npy', data_obj["val_objIds"])
+np.save('test_objIds.npy', data_obj["test_objIds"])
+np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
+np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
 
+"""
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.
 # [0] because we assume only one finkclass will have the maximum occurence.
 # If more than one finkclass have maximum occurence, all such finkclasses will be included.
-objIds_finkclass = []
-for objectId in df_alerts['objectId'].unique():
-    common_finkclasses = df_alerts[df_alerts['objectId'] == objectId]['finkclass'].mode()
-    for common_finkclass in common_finkclasses:  # generally len(common_finkclasses) is expected to be one only, but sometimes there may be multiple modes.
-        objIds_finkclass.append((objectId, common_finkclass))
-
-objIds_finkclass = np.array(objIds_finkclass)
-np.save('objIds_finkclass.npy', objIds_finkclass)
-
+#objIds_finkclass = []
+#for objectId in df_alerts['objectId'].unique():
+#    common_finkclasses = df_alerts[df_alerts['objectId'] == objectId]['finkclass'].mode()
+#    for common_finkclass in common_finkclasses:  # generally len(common_finkclasses) is expected to be one only, but sometimes there may be multiple modes.
+#        objIds_finkclass.append((objectId, common_finkclass))
+#
+#objIds_finkclass = np.array(objIds_finkclass)
+#np.save('objIds_finkclass.npy', objIds_finkclass)
+"""

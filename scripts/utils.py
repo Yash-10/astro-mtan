@@ -20,7 +20,67 @@ def read_alert(folder):
     pdf = pd.read_parquet(folder)
     return pdf
 
-def get_lc(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
+def get_lc(
+        df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd',
+        objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass',
+        #extract_subset=False, start_index=None, end_index=None
+        make_first_time_zero=True
+    ):
+    """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
+    
+    Returns a tuple (object_Id, tt, vals, mask, labels)
+    """
+    # Accumulate all alerts for the provided objectId
+    pdf = df_alerts[df_alerts[objectId_column] == name].sort_values(by=jd_column)
+
+    if pdf.empty:
+        raise ValueError(f'No alerts exist for objectId = {name}, so cannot make a light curve!')
+
+    # Labels of ZTF filters
+    filtdic = {1: 'g', 2: 'r'}
+
+    observation_data, observation_mask = [], []
+    # for filt in np.unique(pdf['fid']):
+    # Don't loop over pdf['fid'] since in pdf, we might not get all filters. For creating the dataset, we need fixed-sized arrays, so we should select all filters instead of filters seen in this pdf.
+    for filt in np.unique(df_alerts[fid_column]):
+        #if extract_subset:  # TODO: extract subset doesn't work yet. Work is on-going on Colab.
+        #    maskFilt = pdf[fid_column] == filt
+        #    observation_data.append(
+        #        (pdf[magpsf_column] * maskFilt).iloc[start_index:end_index]
+        #    )
+        #    observation_mask.append(
+        #        maskFilt.astype(int)
+        #    )
+        #else:
+        maskFilt = pdf[fid_column] == filt
+        observation_data.append(
+            pdf[magpsf_column] * maskFilt  # because when observation for this filter is not present, we want to replace the observed value with zero, as done in the mTAN code.
+        )
+        observation_mask.append(
+            maskFilt.astype(int)
+        )
+
+    observation_data = np.array(observation_data).T  # after transpose: seqlen x num_channels
+    observation_mask = np.array(observation_mask).T  # after transpose: seqlen x num_channels
+
+    times = np.expand_dims(pdf[jd_column], 1)  # Add dimension at the 1st index to prepare for concatenation.
+    #data = np.concatenate((observation_data, observation_mask, times), axis=1)
+
+    if make_first_time_zero:
+        # Make the first time to zero. The below two lines are only for machine learning purposes since the time must always start at zero for all light curves.
+        times = times - times[0]
+        times = times * 24  # to convert times into hours.
+
+    if finkclass_column is not None:  # finkclass_column will be None when getting the light curve from the API service instead of polling the alerts.
+        common_finkclasses = df_alerts[df_alerts[objectId_column] == name][finkclass_column].mode().tolist()
+    else:
+        common_finkclasses = [None]
+
+    data = (name, times, observation_data, observation_mask, common_finkclasses)
+
+    return data
+
+def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name)."""
     # Accumulate all alerts for the provided objectId
     pdf = df_alerts[df_alerts[objectId_column] == name].sort_values(by=jd_column)
