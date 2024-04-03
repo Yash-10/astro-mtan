@@ -7,6 +7,8 @@ import torch.optim as optim
 from random import SystemRandom
 import models
 
+import time
+
 import mtan_utils
 
 parser = argparse.ArgumentParser()
@@ -107,7 +109,7 @@ if __name__ == '__main__':
         train_loss = 0
         train_n = 0
         avg_reconst, avg_kl, mse = 0, 0, 0
-        val_avg_reconst, val_avg_kl, val_mse, val_loss, val_n = 0, 0, 0, 0, 0
+        val_avg_reconst, val_avg_kl, val_mse, val_loss = 0, 0, 0, 0
         if args.kl:
             wait_until_kl_inc = 10
             if itr < wait_until_kl_inc:
@@ -119,8 +121,7 @@ if __name__ == '__main__':
 
         start_time = time.time()
 
-        for b in train_loader:
-            train_batch = b[0]  # batch[1] contains the objectIds in numerical form.
+        for train_batch in train_loader:
             train_batch = train_batch.to(device)
             batch_len = train_batch.shape[0]
             observed_data = train_batch[:, :, :dim]
@@ -182,10 +183,10 @@ if __name__ == '__main__':
             }, args.dataset + '_' + args.enc + '_' + args.dec + '_' + '.h5')
 
         # Validation end.
-        scheduler.step(val_mse / val_n)
+        scheduler.step(val_mse)
 
         print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_mse: {:.6f}'
-                .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_mse / val_n))
+                .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_mse))
         if itr % 5 == 0:
             print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device))
 

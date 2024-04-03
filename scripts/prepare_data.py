@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from torch.utils.data import TensorDataset, DataLoader
 
-def add_tns_tde():
+def add_tns_tde():  # TODO: Generalize this function to allow any object, not just TDEs. This will help in curating a confident, labelled dataset.
     tns_tde_objIds = ['ZTF24aaahxwr', 'ZTF24aaecooj', 'ZTF20aahmtso', 'ZTF22aafujzv', 'ZTF22aadesap', 'ZTF18aabdajx', 'ZTF21aanxhjv', 'ZTF22abegjtx']
     flags = [1, 1, 0, 0, 0, 0, 0, 0]  # 1 means use entire light curve since it contains few points already. 0 means need to manually select a subset.
     subset_indices = [(None, None), (None, None), (1,35), (0,25), (0,20), (0,9), (0,15), (0,21)]  # indices are 0:len(pdf), 0:len(pdf), 1:35, 0:25, etc.
@@ -32,7 +32,7 @@ def add_tns_tde():
 
         # Format output in a DataFrame
         pdf = pd.read_json(io.BytesIO(r.content))
-        pdf = df_alerts[df_alerts[objectId_column] == name].sort_values(by=jd_column)
+        pdf = pdf[pdf[objectId_column] == tobjId].sort_values(by=jd_column)
 
         if X is not None and Y is not None:
             jds, magpsfs, sigmapsfs, filters = [],[],[],[]
@@ -53,9 +53,9 @@ def add_tns_tde():
             df['i:fid'] = filters
             df['i:objectId'] = tobjId
             df['i:finkclass'] = 'TDE'
-            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass')
+            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True)
         else:
-            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None)
+            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True)
 
         total_data.append(lc_data)
         assert lc_data[0] == tobjId
@@ -65,14 +65,15 @@ def add_tns_tde():
     return total_data, total_objId, total_common_finkclasses
 
 
-def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False):
+def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False):
     """
     """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'  # We don't require GPU fr preparing the data but only for training.
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, convert_to_tensor=True)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId
         total_objId.append(objId)
@@ -88,6 +89,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     data_min, data_max = get_data_min_max(total_data)
     print(f'data_min, data_max: {data_min, data_max}')
+    data_min, data_max = data_min.to(device), data_max.to(device)
 
     # TODO: should we use stratified split? stratifying based on the most common finkclass across all alerts of a given objId --> can do for classification, not required for unsupervised learning.
     # TODO: Ensure that using random_state=42 and shuffle=True gives the same output since I am using train_test_independently for splitting the data and the objIds.
@@ -99,12 +101,12 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId_encoded, train_size=train_size, random_state=42, shuffle=True)
     train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=train_size, random_state=42, shuffle=True)
 
-    # Note: As per the mTAN code, we are using the same data_min and data_max across train, val, and test sets since these min/max vals are calculated using all three combined above.
-    train_data_combined = variable_time_collate_fn(train_data, device, classify=classif, activity=activity,
+    # Note: As per the mTAN code, we are using the same data_min and data_max across train, val, and test sets: these min/max vals are calculated using all three combined above.
+    train_data_combined = variable_time_collate_fn(train_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
-    val_data_combined = variable_time_collate_fn(val_data, device, classify=classif, activity=activity,
+    val_data_combined = variable_time_collate_fn(val_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
-    test_data_combined = variable_time_collate_fn(test_data, device, classify=classif, activity=activity,
+    test_data_combined = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
 
     print(f'train_data_combined.shape, val_data_combined.shape, test_data_combined.shape: {train_data_combined.shape, val_data_combined.shape, test_data_combined.shape}')
@@ -126,7 +128,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     # Since total_common_finkclass may be heterogenous, we pad them just for convenience before saving as an numpy array.
     # Credit for below code: https://stackoverflow.com/a/43146373
-    pad = len(max(lst, key=len))
+    pad = len(max(total_common_finkclasses, key=len))
     total_common_finkclasses = np.array([i + [0]*(pad-len(i)) for i in total_common_finkclasses])
 
     train_data_objId_raw = le.inverse_transform(train_data_objId)

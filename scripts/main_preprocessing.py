@@ -1,10 +1,13 @@
+import os
+import glob
+import shutil
 import numpy as np
 import torch
 from utils import read_alert
 from prepare_data import prepare_data
 
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-03-23_349541'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-02_252737'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -63,7 +66,6 @@ def preprocessing_alert_folders(topic_path):
     print('Starting arranding subfolders...')
     for raw_dir in glob.glob(DIRS):
         dir = raw_dir.split('/')[-1].split('finkclass=')[-1]
-        print(dir)
         if dir in agn_list:
             shutil.move(raw_dir, AGN_DIR)
             df_alerts.finkclass.replace(dir, 'custom_agn', inplace=True)
@@ -80,6 +82,8 @@ def preprocessing_alert_folders(topic_path):
             print(f'Folder {dir} not in the alerts, skipping...')
     print('Done!')
 
+
+    df_alerts_shape = df_alerts.shape
 
     # After renaming the columns, preprocess the alerts based on some criteria
     # Select the objectIds (transients) that have more than or equal to three alerts in atleast one passband/filter.
@@ -103,9 +107,9 @@ def preprocessing_alert_folders(topic_path):
     return df_alerts
 
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
-df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}')
+df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}'+'.parquet')
 
-data_obj = prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32)
+data_obj = prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, convert_to_tensor=True)
 
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')

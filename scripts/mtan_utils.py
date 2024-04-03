@@ -55,8 +55,7 @@ def normalize_masked_data(data, mask, att_min, att_max):
 def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda"):
     mse, test_n = 0.0, 0.0
     with torch.no_grad():
-        for b in test_loader:
-            test_batch = b[0]  # batch[1] contains the objectIds in numerical form.
+        for test_batch in test_loader:
             test_batch = test_batch.to(device)
             observed_data, observed_mask, observed_tp = (
                 test_batch[:, :, :dim],
@@ -254,8 +253,9 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
             combined_labels = torch.zeros([len(batch), N]).to(device)
 
     for b, (record_id, tt, vals, mask, labels) in enumerate(batch):
+        print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
         currlen = tt.size(0)
-        enc_combined_tt[b, :currlen] = tt.to(device)
+        enc_combined_tt[b, :currlen] = tt.squeeze().to(device)
         enc_combined_vals[b, :currlen] = vals.to(device)
         enc_combined_mask[b, :currlen] = mask.to(device)
         if classify:

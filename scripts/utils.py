@@ -4,6 +4,7 @@ from distutils.dir_util import copy_tree
 import os
 import glob
 import numpy as np
+import torch
 import pandas as pd
 
 def get_dirs(topic_path):
@@ -24,7 +25,7 @@ def get_lc(
         df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd',
         objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass',
         #extract_subset=False, start_index=None, end_index=None
-        make_first_time_zero=True
+        make_first_time_zero=True, convert_to_tensor=False
     ):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
     
@@ -43,7 +44,7 @@ def get_lc(
     # for filt in np.unique(pdf['fid']):
     # Don't loop over pdf['fid'] since in pdf, we might not get all filters. For creating the dataset, we need fixed-sized arrays, so we should select all filters instead of filters seen in this pdf.
     for filt in np.unique(df_alerts[fid_column]):
-        #if extract_subset:  # TODO: extract subset doesn't work yet. Work is on-going on Colab.
+        #if extract_subset:
         #    maskFilt = pdf[fid_column] == filt
         #    observation_data.append(
         #        (pdf[magpsf_column] * maskFilt).iloc[start_index:end_index]
@@ -75,6 +76,11 @@ def get_lc(
         common_finkclasses = df_alerts[df_alerts[objectId_column] == name][finkclass_column].mode().tolist()
     else:
         common_finkclasses = [None]
+    
+    if convert_to_tensor:
+        times = torch.from_numpy(times)
+        observation_data = torch.from_numpy(observation_data)
+        observation_mask = torch.from_numpy(observation_mask)
 
     data = (name, times, observation_data, observation_mask, common_finkclasses)
 
