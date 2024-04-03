@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     params = (list(dec.parameters()) + list(rec.parameters()))
     optimizer = optim.Adam(params, lr=args.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=5, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
     print('parameters:', mtan_utils.count_parameters(rec), mtan_utils.count_parameters(dec))
     if args.fname is not None:
         checkpoint = torch.load(args.fname)
@@ -179,18 +179,18 @@ if __name__ == '__main__':
                 'rec_state_dict': rec_state_dict,
                 'dec_state_dict': dec_state_dict,
                 'optimizer_state_dict': optimizer_state_dict,
-                'loss': -loss,
             }, args.dataset + '_' + args.enc + '_' + args.dec + '_' + '.h5')
 
         # Validation end.
         scheduler.step(val_mse)
+        print(f'learning rate at iteration {itr} = {scheduler.get_last_lr()}')
 
         print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_mse: {:.6f}'
                 .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_mse))
         if itr % 5 == 0:
             print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device))
 
-        print(f'Time elapsed {total_time/60:.2f} min')
+    print(f'Time elapsed {total_time/60:.2f} min')
 
         #if itr % 10 == 0 and args.save:
         #    torch.save({

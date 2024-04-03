@@ -60,7 +60,7 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
         total_data.append(lc_data)
         assert lc_data[0] == tobjId
         total_objId.append(tobjId)
-        total_common_finkclasses.append(lc_data[-1] if lc_data[-1] is not None else 'TDE')
+        total_common_finkclasses.append(lc_data[-1] if lc_data[-1] != [None] else 'TDE')
 
     return total_data, total_objId, total_common_finkclasses
 

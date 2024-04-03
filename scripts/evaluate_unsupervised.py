@@ -6,14 +6,14 @@ import numpy as np
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# TODO: Add option to pass these arguments as argument parsers.
-num_ref_points = 64
+# TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
+num_ref_points = 16
 latent_dim = 16
 learn_emb = True
 rec_hidden = 64
 enc_num_heads = 1
 sample_tp = 0.9
-num_sample = 10
+num_sample = 1
 dim = 2
 
 #train_loader = torch.load('train_dataloader.pth')
@@ -33,6 +33,7 @@ rec = enc_mtan_rnn(
 
 model_file = torch.load('ftransfer_ztf_2024-04-02_252737_mtan_rnn_mtan_rnn_.h5')
 rec.load_state_dict(model_file['rec_state_dict'])
+rec.eval()
 
 outputs = []
 with torch.no_grad():
@@ -61,10 +62,8 @@ with torch.no_grad():
         z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
         outputs.append(z0)
 
-outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_sample, 64, 16). The num_sample dimension can be averaged or compressed.
-#objIds = le.inverse_transform([o[0][0].cpu().detach().numpy() for o in outputs])
+outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, 64, 16). The num_sample dimension can be averaged or compressed somehow.
 print(outputs_condensed.shape)
 
 np.save('test_outputs_condensed.npy', outputs_condensed)
-#np.save('objIds.npy', objIds)
 
