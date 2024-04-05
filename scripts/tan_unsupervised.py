@@ -25,10 +25,10 @@ parser.add_argument('--enc', type=str, default='mtan_rnn')
 parser.add_argument('--dec', type=str, default='mtan_rnn')
 parser.add_argument('--fname', type=str, default=None)
 parser.add_argument('--seed', type=int, default=0)
-parser.add_argument('--n', type=int, default=8000)
+#parser.add_argument('--n', type=int, default=8000)
 parser.add_argument('--batch-size', type=int, default=50)
-parser.add_argument('--quantization', type=float, default=0.016,
-                    help="Quantization on the physionet dataset.")
+#parser.add_argument('--quantization', type=float, default=0.016,
+#                    help="Quantization on the physionet dataset.")
 parser.add_argument('--classif', action='store_true',
                     help="Include binary classification loss")
 parser.add_argument('--norm', action='store_true')
@@ -36,14 +36,14 @@ parser.add_argument('--kl', action='store_true')
 parser.add_argument('--learn-emb', action='store_true')
 parser.add_argument('--enc-num-heads', type=int, default=1)
 parser.add_argument('--dec-num-heads', type=int, default=1)
-parser.add_argument('--length', type=int, default=20)
+#parser.add_argument('--length', type=int, default=20)
 parser.add_argument('--num-ref-points', type=int, default=128)
 parser.add_argument('--dataset', type=str, default='toy')
 parser.add_argument('--enc-rnn', action='store_false')
 parser.add_argument('--dec-rnn', action='store_false')
 parser.add_argument('--sample-tp', type=float, default=1.0)
-parser.add_argument('--only-periodic', type=str, default=None)
-parser.add_argument('--dropout', type=float, default=0.0)
+#parser.add_argument('--only-periodic', type=str, default=None)
+parser.add_argument('--dropout', type=float, default=0.0)  # TODO: Add dropout later.
 parser.add_argument('--topic', type=str, help='Name of the topic of the data transfer that contains the alerts.')
 parser.add_argument('--dim', type=int, help='dim value')
 args = parser.parse_args()
@@ -70,20 +70,20 @@ if __name__ == '__main__':
     if args.enc == 'enc_rnn3':
         rec = models.enc_rnn3(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, 
-            args.rec_hidden, 128, learn_emb=args.learn_emb, device=device).to(device)
+            args.rec_hidden, args.embed_time, learn_emb=args.learn_emb, device=device).to(device)
     elif args.enc == 'mtan_rnn':
         rec = models.enc_mtan_rnn(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.rec_hidden, 
-            embed_time=128, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device).to(device)
 
     if args.dec == 'rnn3':
         dec = models.dec_rnn3(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, 
-            args.gen_hidden, 128, learn_emb=args.learn_emb, device=device).to(device)
+            args.gen_hidden, args.embed_time, learn_emb=args.learn_emb, device=device).to(device)
     elif args.dec == 'mtan_rnn':
         dec = models.dec_mtan_rnn(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.gen_hidden, 
-            embed_time=128, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device).to(device)
 
 
     params = (list(dec.parameters()) + list(rec.parameters()))
@@ -128,6 +128,8 @@ if __name__ == '__main__':
             observed_mask = train_batch[:, :, dim:2 * dim]
             observed_tp = train_batch[:, :, -1]
             if args.sample_tp and args.sample_tp < 1:
+                # NOTE: I think this was designed for synthetic experiments (see Appendix A2 of the mTAN paper).
+                # So this subsampling is not needed in our case since we only deal with observations.
                 subsampled_data, subsampled_tp, subsampled_mask = mtan_utils.subsample_timepoints(
                     observed_data.clone(), observed_tp.clone(), observed_mask.clone(), args.sample_tp)
             else:

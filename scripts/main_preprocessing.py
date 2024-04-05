@@ -2,12 +2,13 @@ import os
 import glob
 import shutil
 import numpy as np
+import pandas as pd
 import torch
 from utils import read_alert
-from prepare_data import prepare_data
+from prepare_data import prepare_data, get_tns_tde_alerts
+from constants import agn_list, stars_list, simbad_galaxies_list
 
-
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-02_252737'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-04_579178_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -26,35 +27,6 @@ def preprocessing_alert_folders(topic_path):
 
 
     DIRS = f'{topic_path}/*'
-
-    # We collate come subclasses into a single class based on the below rule.
-    agn_list = ['AGN','Blazar','BLLac','LINER','QSO','Seyfert', 'Seyfert_1', 'Seyfert_2']
-    stars_list = ['EB*','CataclyV*','LMXB','RRLyr','RotV*','Star','WD*','low-mass*']
-    simbad_galaxies_list = [
-            "galaxy",
-            "Galaxy",
-            "EmG",
-            "Seyfert",
-            "Seyfert_1",
-            "Seyfert_2",
-            "BlueCompG",
-            "StarburstG",
-            "LSB_G",
-            "HII_G",
-            "High_z_G",
-            "GinPair",
-            "GinGroup",
-            "BClG",
-            "GinCl",
-            "PartofG",
-            "Compact_Gr_G",
-            "IG",
-            "PairG",
-            "GroupG",
-            "ClG",
-            "SuperClG",
-            "Void",
-        ]
 
     AGN_DIR = os.path.join(f'{topic_path}', 'custom_agn')
     STARS_DIR = os.path.join(f'{topic_path}', 'custom_stars')
@@ -103,6 +75,11 @@ def preprocessing_alert_folders(topic_path):
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
+
+    ################### Adding alerts manually #######################################
+    tns_processed_alerts = get_tns_tde_alerts()
+    df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
+    ##################################################################################
 
     return df_alerts
 

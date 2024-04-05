@@ -10,6 +10,61 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from torch.utils.data import TensorDataset, DataLoader
 
+def get_tns_tde_alerts():
+    tns_tde_objIds = ['ZTF24aaahxwr', 'ZTF24aaecooj', 'ZTF20aahmtso', 'ZTF22aafujzv', 'ZTF22aadesap', 'ZTF18aabdajx', 'ZTF21aanxhjv', 'ZTF22abegjtx']
+    flags = [1, 1, 0, 0, 0, 0, 0, 0]  # 1 means use entire light curve since it contains few points already. 0 means need to manually select a subset.
+    subset_indices = [(None, None), (None, None), (1,35), (0,25), (0,20), (0,9), (0,15), (0,21)]  # indices are 0:len(pdf), 0:len(pdf), 1:35, 0:25, etc.
+
+    alert_poll_columns = ['objectId', 'candid', 'magpsf', 'sigmapsf', 'fid', 'jd', 'ra', 'dec',
+        'tnsclass', 'cdsxmatch', 'roid', 'mulens', 'snn_snia_vs_nonia',
+        'snn_sn_vs_all', 'rf_snia_vs_nonia', 'rf_kn_vs_nonkn', 'tracklet',
+        'lc_features_g', 'lc_features_r', 'finkclass']
+    # NOTE: The below is a fix because these caused problems while saving the dataframe into a parquet file we don't need these two columns.
+    alert_poll_columns.remove('lc_features_g')
+    alert_poll_columns.remove('lc_features_r')
+
+    alerts = []
+
+    total_data, total_objId, total_common_finkclasses = [], [], []
+    for counter, tobjId in enumerate(tns_tde_objIds):
+        X, Y = subset_indices[counter]
+
+        r = requests.post(
+          'https://fink-portal.org/api/v1/objects',
+          json={
+            'objectId': tobjId,
+            'output-format': 'json'
+          }
+        )
+
+        fid_column, objectId_column, jd_column = 'fid', 'i:objectId', 'i:jd'
+
+        # Format output in a DataFrame
+        pdf = pd.read_json(io.BytesIO(r.content))
+        pdf = pdf[pdf[objectId_column] == tobjId].sort_values(by=jd_column)
+        pdf.columns = pdf.columns.str[2:]  # this is required to match the column names of the dataframe obtained from polling the alerts.
+        # Update DataFrame A to have the same columns as B, filling missing ones with NaN
+        for column in alert_poll_columns:
+            if column not in pdf.columns:
+                pdf[column] = np.nan  # Add missing columns to pdf with NaN values
+
+        # Ensure the order of columns in pdf matches that of alert_poll.
+        pdf = pdf[alert_poll_columns]
+        # I manually checked that these two columns are not in pdf but were present in alert_poll.
+        pdf['finkclass'] = 'TNS (TDE)'
+        pdf['tnsclass'] = 'TNS (TDE)'
+
+        if X is not None and Y is not None:
+            for filt in np.unique(pdf[fid_column]):
+                # select data from one filter at a time
+                maskFilt = pdf[fid_column] == filt    
+                alerts.append(pdf[maskFilt][X:Y])
+        else:
+            alerts.append(pdf)
+
+    alerts = pd.concat(alerts)
+    return alerts
+
 def add_tns_tde():  # TODO: Generalize this function to allow any object, not just TDEs. This will help in curating a confident, labelled dataset.
     tns_tde_objIds = ['ZTF24aaahxwr', 'ZTF24aaecooj', 'ZTF20aahmtso', 'ZTF22aafujzv', 'ZTF22aadesap', 'ZTF18aabdajx', 'ZTF21aanxhjv', 'ZTF22abegjtx']
     flags = [1, 1, 0, 0, 0, 0, 0, 0]  # 1 means use entire light curve since it contains few points already. 0 means need to manually select a subset.
@@ -19,11 +74,10 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
     for counter, tobjId in enumerate(tns_tde_objIds):
         X, Y = subset_indices[counter]
 
-        # get data for many objects
         r = requests.post(
           'https://fink-portal.org/api/v1/objects',
           json={
-            'objectId': ','.join(tns_tde_objIds),
+            'objectId': tobjId,
             'output-format': 'json'
           }
         )
@@ -53,9 +107,9 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
             df['i:fid'] = filters
             df['i:objectId'] = tobjId
             df['i:finkclass'] = 'TDE'
-            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True)
+            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True, normalize_times=False)
         else:
-            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True)
+            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True, normalize_times=False)
 
         total_data.append(lc_data)
         assert lc_data[0] == tobjId
@@ -73,7 +127,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId, convert_to_tensor=True)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=True, normalize_times=False)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId
         total_objId.append(objId)
@@ -81,10 +135,11 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     ################################################
     # Add cases manually. Currently we only add TDEs
-    tns_tde_total_data, tns_tde_total_objId, tns_tde_total_common_finkclasses = add_tns_tde()
-    total_data.extend(tns_tde_total_data)
-    total_objId.extend(tns_tde_total_objId)
-    total_common_finkclasses.extend(tns_tde_total_common_finkclasses)
+    # EDIT: We don't need this since I am adding these cases in the processed alerts dataframe directly. Otherwise it becomes difficult to access these alerts for post-testing analysis
+    #tns_tde_total_data, tns_tde_total_objId, tns_tde_total_common_finkclasses = add_tns_tde()
+    #total_data.extend(tns_tde_total_data)
+    #total_objId.extend(tns_tde_total_objId)
+    #total_common_finkclasses.extend(tns_tde_total_common_finkclasses)
     ################################################
 
     data_min, data_max = get_data_min_max(total_data)
@@ -99,7 +154,18 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     total_objId_encoded = le.fit_transform(total_objId)  # use le.inverse_transform to get the string from the encoded value.
 
     train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId_encoded, train_size=train_size, random_state=42, shuffle=True)
-    train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=train_size, random_state=42, shuffle=True)
+    train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=0.8, random_state=42, shuffle=True)
+
+    print('DEBUG: train_data and test_data last time printing for random cases.')
+    for i, td in enumerate(train_data):
+        if i == 5:
+            break
+        print(td[1][-1])
+
+    for i, td in enumerate(test_data):
+        if i == 5:
+            break
+        print(td[1][-1])
 
     # Note: As per the mTAN code, we are using the same data_min and data_max across train, val, and test sets: these min/max vals are calculated using all three combined above.
     train_data_combined = variable_time_collate_fn(train_data, device, classify=classify, activity=activity,
@@ -110,6 +176,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
                                                       data_min=data_min, data_max=data_max)
 
     print(f'train_data_combined.shape, val_data_combined.shape, test_data_combined.shape: {train_data_combined.shape, val_data_combined.shape, test_data_combined.shape}')
+    print('Printing train_data_combined[0, :, -1], test_data_combined[0, :, -1] => these are the time values (after all processing and to be used in the model) where the min value must be zero and maximum value must be one. Max value can also be less than one, but must not be greater than one.')
+    print(train_data_combined[0, :, -1], test_data_combined[0, :, -1])
 
     ##### A quick check #####
     seq_len_all = []  # stores the sequence length of all light curves.

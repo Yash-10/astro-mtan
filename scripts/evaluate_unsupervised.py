@@ -12,8 +12,9 @@ latent_dim = 16
 learn_emb = True
 rec_hidden = 64
 enc_num_heads = 1
-sample_tp = 0.9
+sample_tp = 1.0
 num_sample = 1
+embed_time = 128
 dim = 2
 
 #train_loader = torch.load('train_dataloader.pth')
@@ -28,10 +29,10 @@ assert np.all(total_objIds_encoded == total_objIds_encoded_again)  # since the l
 
 rec = enc_mtan_rnn(
     dim, torch.linspace(0, 1., num_ref_points), latent_dim, rec_hidden,
-    embed_time=128, learn_emb=learn_emb, num_heads=enc_num_heads, device=device
+    embed_time=embed_time, learn_emb=learn_emb, num_heads=enc_num_heads, device=device
 ).to(device)
 
-model_file = torch.load('ftransfer_ztf_2024-04-02_252737_mtan_rnn_mtan_rnn_.h5')
+model_file = torch.load('ftransfer_ztf_2024-04-04_579178_copy_mtan_rnn_mtan_rnn_.h5')
 rec.load_state_dict(model_file['rec_state_dict'])
 rec.eval()
 
@@ -62,7 +63,7 @@ with torch.no_grad():
         z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
         outputs.append(z0)
 
-outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, 64, 16). The num_sample dimension can be averaged or compressed somehow.
+outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow.
 print(outputs_condensed.shape)
 
 np.save('test_outputs_condensed.npy', outputs_condensed)

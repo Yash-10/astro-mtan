@@ -25,7 +25,7 @@ def get_lc(
         df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd',
         objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass',
         #extract_subset=False, start_index=None, end_index=None
-        make_first_time_zero=True, convert_to_tensor=False
+        make_first_time_zero=True, convert_to_tensor=False, normalize_times=False
     ):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
     
@@ -68,9 +68,14 @@ def get_lc(
     #data = np.concatenate((observation_data, observation_mask, times), axis=1)
 
     if make_first_time_zero:
+        # As per the Physionet dataset (at least) from the mTAN paper, the times always start at zero. Their time units are also in hours. So this replicates that.
         # Make the first time to zero. The below two lines are only for machine learning purposes since the time must always start at zero for all light curves.
         times = times - times[0]
-        times = times * 24  # to convert times into hours.
+        #times = times * 24  # to convert times into hours.
+
+    if normalize_times:
+        # NOTE: If you use get_lc for different length light curves, this normalize_times may not be best since a normalized time value of 1 means the same for two very different lengt light curves.
+        times = normalize_time_values(times)
 
     if finkclass_column is not None:  # finkclass_column will be None when getting the light curve from the API service instead of polling the alerts.
         common_finkclasses = df_alerts[df_alerts[objectId_column] == name][finkclass_column].mode().tolist()
@@ -85,6 +90,14 @@ def get_lc(
     data = (name, times, observation_data, observation_mask, common_finkclasses)
 
     return data
+
+def normalize_time_values(times):
+    """`times` must start with zero and be in units of hours. This function assumes that.
+    times are multipled by 48 after normalization which means the normalized time valus lie in [0, 48] hours.
+    """
+    normalized_times = (times - np.min(times)) / (np.max(times) - np.min(times))
+    normalized_times *= 48
+    return normalized_times
 
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name)."""
