@@ -257,6 +257,12 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
         currlen = tt.size(0)
         enc_combined_tt[b, :currlen] = tt.squeeze().to(device)
         enc_combined_vals[b, :currlen] = vals.to(device)
+
+        # Below two lines are added now.
+        data_min, data_max = get_data_min_max_single_record((record_id, tt, vals, mask, labels))
+        enc_combined_vals, _, _ = normalize_masked_data(enc_combined_vals, enc_combined_mask,
+                                                att_min=data_min, att_max=data_max)
+
         enc_combined_mask[b, :currlen] = mask.to(device)
         if classify:
             if activity:
@@ -264,9 +270,11 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
             else:
                 combined_labels[b] = labels.to(device)
 
+    """  # This was the code used in mTAN. We use min/max statistics of the data itself for normalizing. So that's why it's done inside the for loop.
     if not activity:
         enc_combined_vals, _, _ = normalize_masked_data(enc_combined_vals, enc_combined_mask,
                                                         att_min=data_min, att_max=data_max)
+    """
 
     if torch.max(enc_combined_tt) != 0.:
         enc_combined_tt = enc_combined_tt / torch.max(enc_combined_tt)
@@ -493,3 +501,35 @@ def get_data_min_max(records):
             data_max = torch.max(data_max, batch_max)
 
     return data_min, data_max
+
+def get_data_min_max_single_record(record):
+    data_min, data_max = None, None
+    inf = torch.Tensor([float("Inf")])[0]
+
+    (record_id, tt, vals, mask, labels) = record
+
+    n_features = vals.size(-1)
+
+    batch_min = []
+    batch_max = []
+    for i in range(n_features):
+        non_missing_vals = vals[:,i][mask[:,i] == 1]
+        if len(non_missing_vals) == 0:
+            batch_min.append(inf)
+            batch_max.append(-inf)
+        else:
+            batch_min.append(torch.min(non_missing_vals))
+            batch_max.append(torch.max(non_missing_vals))
+
+    batch_min = torch.stack(batch_min)
+    batch_max = torch.stack(batch_max)
+
+    if (data_min is None) and (data_max is None):
+        data_min = batch_min
+        data_max = batch_max
+    else:
+        data_min = torch.min(data_min, batch_min)
+        data_max = torch.max(data_max, batch_max)
+
+    return data_min, data_max
+

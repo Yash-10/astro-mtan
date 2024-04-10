@@ -3,7 +3,7 @@ import numpy as np
 import requests
 import pandas as pd
 from utils import get_lc, pad_rows_to_match_columns
-from mtan_utils import variable_time_collate_fn, get_data_min_max
+from mtan_utils import variable_time_collate_fn, get_data_min_max, get_data_min_max_single_record
 
 import torch
 from sklearn.model_selection import train_test_split
@@ -40,6 +40,7 @@ def get_tns_tde_alerts():
         fid_column, objectId_column, jd_column = 'fid', 'i:objectId', 'i:jd'
 
         # Format output in a DataFrame
+        print(r.content)
         pdf = pd.read_json(io.BytesIO(r.content))
         pdf = pdf[pdf[objectId_column] == tobjId].sort_values(by=jd_column)
         pdf.columns = pdf.columns.str[2:]  # this is required to match the column names of the dataframe obtained from polling the alerts.
@@ -107,9 +108,9 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
             df['i:fid'] = filters
             df['i:objectId'] = tobjId
             df['i:finkclass'] = 'TDE'
-            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True, normalize_times=False)
+            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True, normalize_times=True)
         else:
-            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True, normalize_times=False)
+            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True, normalize_times=True)
 
         total_data.append(lc_data)
         assert lc_data[0] == tobjId
@@ -127,7 +128,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=True, normalize_times=False)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=True, normalize_times=True)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId
         total_objId.append(objId)
@@ -142,9 +143,10 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     #total_common_finkclasses.extend(tns_tde_total_common_finkclasses)
     ################################################
 
-    data_min, data_max = get_data_min_max(total_data)
-    print(f'data_min, data_max: {data_min, data_max}')
-    data_min, data_max = data_min.to(device), data_max.to(device)
+    #data_min, data_max = get_data_min_max(total_data)
+    #print(f'data_min, data_max: {data_min, data_max}')
+    #data_min, data_max = data_min.to(device), data_max.to(device)
+    data_min, data_max = None, None  # Since we don't use min/max calculated across the entire train/val/test dataset.
 
     # TODO: should we use stratified split? stratifying based on the most common finkclass across all alerts of a given objId --> can do for classification, not required for unsupervised learning.
     # TODO: Ensure that using random_state=42 and shuffle=True gives the same output since I am using train_test_independently for splitting the data and the objIds.
@@ -156,7 +158,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId_encoded, train_size=train_size, random_state=42, shuffle=True)
     train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=0.8, random_state=42, shuffle=True)
 
-    print('DEBUG: train_data and test_data last time printing for random cases.')
+    print('DEBUG: train_data and test_data last time printing for a few cases.')
     for i, td in enumerate(train_data):
         if i == 5:
             break

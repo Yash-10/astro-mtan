@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
-from constants import agn_list, stars_list, simbad_galaxies_list
+from constants import agn_list, stars_list, sn_list
 
 TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-04_579178_copy'
 
@@ -30,6 +30,7 @@ def preprocessing_alert_folders(topic_path):
 
     AGN_DIR = os.path.join(f'{topic_path}', 'custom_agn')
     STARS_DIR = os.path.join(f'{topic_path}', 'custom_stars')
+    SN_DIR = os.path.join(f'{topic_path}', 'custom_sn')
     SIMBAD_GALAXIES_DIR = os.path.join(f'{topic_path}', 'custom_simbad_galaxies')
     os.makedirs(AGN_DIR, exist_ok=True)
     os.makedirs(STARS_DIR, exist_ok=True)
@@ -46,9 +47,13 @@ def preprocessing_alert_folders(topic_path):
             shutil.move(raw_dir, STARS_DIR)
             df_alerts.finkclass.replace(dir, 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir in simbad_galaxies_list:
-            shutil.move(raw_dir, SIMBAD_GALAXIES_DIR)
-            df_alerts.finkclass.replace(dir, 'custom_simbad_galaxies', inplace=True)
+        elif dir in sn_list:
+            shutil.move(raw_dir, SN_DIR)
+            df_alerts.finkclass.replace(dir, 'custom_sn', inplace=True)
+            # shutil.rmtree(raw_dir)
+        #elif dir in simbad_galaxies_list:
+        #    shutil.move(raw_dir, SIMBAD_GALAXIES_DIR)
+        #    df_alerts.finkclass.replace(dir, 'custom_simbad_galaxies', inplace=True)
             # shutil.rmtree(raw_dir)
         else:
             print(f'Folder {dir} not in the alerts, skipping...')
@@ -57,28 +62,37 @@ def preprocessing_alert_folders(topic_path):
 
     df_alerts_shape = df_alerts.shape
 
+    ######################################## THESE ARE THE OLD CONDITIONS ########################################
     # After renaming the columns, preprocess the alerts based on some criteria
     # Select the objectIds (transients) that have more than or equal to three alerts in atleast one passband/filter.
     # Note that we mean more than three alerts in the time period in which the alerts are captured and not from the start of the survey.
     # See notes above.
     # For requiring three rather than two alerts, it's because if there are one or two alerts, you can fit anything to them with good accuracy.
     # Only when you have three points or more, can we fit something meaningful.
+    #df_alerts = df_alerts.groupby('objectId').filter(
+    #    lambda group: (len(group[group['fid'] == 1]) >= 3) or (len(group[group['fid'] == 2]) >= 3)
+    #)
+    #############################################################################################################
+
+    # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
-        lambda group: (len(group[group['fid'] == 1]) >= 3) or (len(group[group['fid'] == 2]) >= 3)
+        lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4)
     )
+
 
     print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
 
     for objectId in df_alerts['objectId'].unique():
         pdf = df_alerts[df_alerts['objectId'] == objectId]
-        assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
+        assert (len(pdf) >= 10) and (len(pdf[pdf['fid'] == 1]) >= 4) and (len(pdf[pdf['fid'] == 2]) >= 4)
+        #assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
 
     ################### Adding alerts manually #######################################
-    tns_processed_alerts = get_tns_tde_alerts()
-    df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
+    #tns_processed_alerts = get_tns_tde_alerts()
+    #df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
     ##################################################################################
 
     return df_alerts

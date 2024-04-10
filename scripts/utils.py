@@ -74,7 +74,7 @@ def get_lc(
         #times = times * 24  # to convert times into hours.
 
     if normalize_times:
-        # NOTE: If you use get_lc for different length light curves, this normalize_times may not be best since a normalized time value of 1 means the same for two very different lengt light curves.
+        # NOTE: If you use get_lc for different length light curves, note the possible caveat that a normalized time value of 1 means the same for two very different length light curves. It's possible that despite this, the relative difference in the times already encodes the information about different duration/length light curves. Not sure definitively.
         times = normalize_time_values(times)
 
     if finkclass_column is not None:  # finkclass_column will be None when getting the light curve from the API service instead of polling the alerts.
@@ -96,7 +96,7 @@ def normalize_time_values(times):
     times are multipled by 48 after normalization which means the normalized time valus lie in [0, 48] hours.
     """
     normalized_times = (times - np.min(times)) / (np.max(times) - np.min(times))
-    normalized_times *= 48
+    normalized_times *= 48  # Doing this is not needed since anyways variable_time_collate_fn will normalize to the [0, 1] range.
     return normalized_times
 
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
