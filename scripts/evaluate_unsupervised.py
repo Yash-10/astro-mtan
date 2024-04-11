@@ -1,4 +1,4 @@
-from models import enc_mtan_rnn
+from models import enc_mtan_rnn, dec_mtan_rnn
 from mtan_utils import subsample_timepoints
 from sklearn import preprocessing
 import torch
@@ -11,11 +11,14 @@ num_ref_points = 16
 latent_dim = 16
 learn_emb = True
 rec_hidden = 64
+gen_hidden = 50
 enc_num_heads = 1
+dec_num_heads = 1
 sample_tp = 1.0
 num_sample = 1
 embed_time = 128
 dim = 2
+store_decoded_lcs = True
 
 #train_loader = torch.load('train_dataloader.pth')
 test_loader = torch.load('test_dataloader.pth')
@@ -32,13 +35,21 @@ rec = enc_mtan_rnn(
     embed_time=embed_time, learn_emb=learn_emb, num_heads=enc_num_heads, device=device
 ).to(device)
 
+dec = dec_mtan_rnn(
+    dim, torch.linspace(0, 1., num_ref_points), latent_dim, gen_hidden,
+    embed_time=embed_time, learn_emb=learn_emb, num_heads=dec_num_heads).to(device)
+
 model_file = torch.load('ftransfer_ztf_2024-04-04_579178_copy_mtan_rnn_mtan_rnn_.h5')
 rec.load_state_dict(model_file['rec_state_dict'])
 rec.eval()
+dec.load_state_dict(model_file['dec_state_dict'])
+dec.eval()
 
 outputs = []
+if store_decoded_lcs:
+    decoded_lcs = []
 with torch.no_grad():
-    for test_batch in test_loader:
+    for test_batch in test_loader:  # TODO: I SHOULD SAVE THE OUTPUTS BUT ALSO THE CORRESPONDING OBJECT IDS SINCE DATALOADER ITERATION MAY NOT BE DETERMINISTIC.
         test_batch = test_batch.to(device)
         observed_data, observed_mask, observed_tp = (
             test_batch[:, :, :dim],
@@ -63,8 +74,27 @@ with torch.no_grad():
         z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
         outputs.append(z0)
 
+        if store_decoded_lcs:
+            batch, seqlen = observed_tp.size()
+            time_steps = (
+                observed_tp[None, :, :].repeat(num_sample, 1, 1).view(-1, seqlen)
+            )
+            pred_x = dec(z0, time_steps)
+            pred_x = pred_x.view(num_sample, -1, pred_x.shape[1], pred_x.shape[2])
+            pred_x = pred_x.mean(0)
+            #mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
+
+            print(pred_x.shape, time_steps.shape, time_steps.unsqueeze(2).shape)
+            decoded_lcs.append(
+                np.vstack(
+                    (pred_x.cpu().detach().numpy(), observed_data.cpu().detach().numpy(), observed_mask.cpu().detach().numpy())  # TODO: Also save time_steps: time_steps.unsqueeze(2).cpu().detach().numpy()
+                )
+            )
+
 outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow.
 print(outputs_condensed.shape)
 
 np.save('test_outputs_condensed.npy', outputs_condensed)
 
+if store_decoded_lcs:
+    np.savez('test_decoded_lcs.npz', *decoded_lcs)

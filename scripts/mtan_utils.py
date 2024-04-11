@@ -254,14 +254,16 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
 
     for b, (record_id, tt, vals, mask, labels) in enumerate(batch):
         print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
-        currlen = tt.size(0)
-        enc_combined_tt[b, :currlen] = tt.squeeze().to(device)
-        enc_combined_vals[b, :currlen] = vals.to(device)
 
         # Below two lines are added now.
         data_min, data_max = get_data_min_max_single_record((record_id, tt, vals, mask, labels))
-        enc_combined_vals, _, _ = normalize_masked_data(enc_combined_vals, enc_combined_mask,
-                                                att_min=data_min, att_max=data_max)
+        if b == 5 or b == 10 or b == 1:  # print for random cases
+            print(f'data_min, data_max: {data_min}, {data_max}')
+        vals, _, _ = normalize_masked_data(vals, mask, att_min=data_min, att_max=data_max)
+
+        currlen = tt.size(0)
+        enc_combined_tt[b, :currlen] = tt.squeeze().to(device)
+        enc_combined_vals[b, :currlen] = vals.to(device)
 
         enc_combined_mask[b, :currlen] = mask.to(device)
         if classify:
