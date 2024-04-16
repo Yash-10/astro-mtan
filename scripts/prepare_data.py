@@ -8,7 +8,7 @@ from mtan_utils import variable_time_collate_fn, get_data_min_max, get_data_min_
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import Dataset, TensorDataset, DataLoader
 
 def get_tns_tde_alerts():
     tns_tde_objIds = ['ZTF24aaahxwr', 'ZTF24aaecooj', 'ZTF20aahmtso', 'ZTF22aafujzv', 'ZTF22aadesap', 'ZTF18aabdajx', 'ZTF21aanxhjv', 'ZTF22abegjtx']
@@ -40,7 +40,6 @@ def get_tns_tde_alerts():
         fid_column, objectId_column, jd_column = 'fid', 'i:objectId', 'i:jd'
 
         # Format output in a DataFrame
-        print(r.content)
         pdf = pd.read_json(io.BytesIO(r.content))
         pdf = pdf[pdf[objectId_column] == tobjId].sort_values(by=jd_column)
         pdf.columns = pdf.columns.str[2:]  # this is required to match the column names of the dataframe obtained from polling the alerts.
@@ -108,9 +107,14 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
             df['i:fid'] = filters
             df['i:objectId'] = tobjId
             df['i:finkclass'] = 'TDE'
-            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True, normalize_times=True)
+
+            # NOTE: IMPORTANT CAVEAT: We have decided to use global normalization and we are finding the max and min times in prepare_data. Those min and max times will not account for these additional cases. We are simply assuming the max times of these light curves will mostly be less than the max times calculated inside prepare_data. If this is not the case, the result is that the normalized time value for this additional light curve will have max value > 1. This may be fine assuming not many such cases will be present. In the below lines, max_time is not defined in this function, but sincee we use this function inside prepare_data, that global context of the variable will be used. Same with min times.
+
+            # ALSO NOTE: We are no longer using add_tns_tde so the above caveats are not to worry about.
+
+            lc_data = get_lc(df, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column='i:finkclass', convert_to_tensor=True, normalize_times=True, local_time_normalization=False, max_time=max_time, min_time=min_time)
         else:
-            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True, normalize_times=True)
+            lc_data = get_lc(pdf, tobjId, fid_column=fid_column, jd_column=jd_column, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column, objectId_column=objectId_column, finkclass_column=None, convert_to_tensor=True, normalize_times=True, local_time_normalization=False, max_time=max_time, min_time=min_time)
 
         total_data.append(lc_data)
         assert lc_data[0] == tobjId
@@ -120,15 +124,49 @@ def add_tns_tde():  # TODO: Generalize this function to allow any object, not ju
     return total_data, total_objId, total_common_finkclasses
 
 
+class MyDataSet(torch.utils.data.Dataset):
+  def __init__(self, data_combined, data_Ids):
+    super(MyDataSet, self).__init__()
+    # store the raw tensors
+    self._data_combined = data_combined
+    self._data_Ids = data_Ids
+
+  def __len__(self):
+    return self._data_combined.shape[0]
+
+  def __getitem__(self, index):
+    x = self._data_combined[index]
+    y = self._data_Ids[index]
+    return x, y
+
+
 def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False):
     """
     """
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = 'cpu'  # We don't require GPU fr preparing the data but only for training.
 
+    # Since we aim to do global time normalization, we first need to find the max and min times (the absolute values and not the no. of datapoints) across the entire dataset.
+    # FIRST, we do the loop only to find the min/max times across the dataset. Then the second loop performs the global time normalization using the max time found in the first loop.
+    min_time, max_time, duration_lcs, min_max_magdiffs = np.Inf, -np.Inf, [], []
+    for objId in df_alerts['objectId'].unique():
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, local_time_normalization=True, max_time=None, min_time=None)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        assert lc_data[0] == objId
+        #assert lc_data[1][0] == 0.0  # Because lc_data[1] is the time array and it must start with zero because we use make_first_time_zero=True above.
+        if lc_data[1][0] < min_time:
+            min_time = lc_data[1][0].numpy()[0]
+        if lc_data[1][-1] > max_time:
+            max_time = lc_data[1][-1].numpy()[0]
+        duration_lcs.append(float(lc_data[1][-1] - lc_data[1][0]))
+        _lc_data_obs = lc_data[2]
+        min_max_magdiffs.append(_lc_data_obs.max() - _lc_data_obs[_lc_data_obs != 0.0].min())  # Ignoring zero values for min because zero values mean unobserved.
+   
+    #assert min_time = 0.0   # Because first time is always zero for all lcs because we use make_first_time_zero=True.
+    print(f'Max and Min time values (in days) across the dataset: {max_time}, {min_time}')
+
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=True, normalize_times=True)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=True, local_time_normalization=False, max_time=max_time, min_time=min_time)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId
         total_objId.append(objId)
@@ -152,10 +190,11 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     # TODO: Ensure that using random_state=42 and shuffle=True gives the same output since I am using train_test_independently for splitting the data and the objIds.
     # TODO: ensure multiple runs of label encoding on the same number gives the same encoded value.
     # We are encoding the objectIds just for efficiency because string types may not be efficient with PyTorch.
-    le = preprocessing.LabelEncoder()
-    total_objId_encoded = le.fit_transform(total_objId)  # use le.inverse_transform to get the string from the encoded value.
+    # NOTE: I commented the below two lines since I am thinking the labels need NOT be encoded, and can keep it as strings only.
+    #le = preprocessing.LabelEncoder()
+    #total_objId_encoded = le.fit_transform(total_objId)  # use le.inverse_transform to get the string from the encoded value.
 
-    train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId_encoded, train_size=train_size, random_state=42, shuffle=True)
+    train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId, train_size=train_size, random_state=42, shuffle=True)
     train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=0.8, random_state=42, shuffle=True)
 
     print('DEBUG: train_data and test_data last time printing for a few cases.')
@@ -170,12 +209,16 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         print(td[1][-1])
 
     # Note: As per the mTAN code, we are using the same data_min and data_max across train, val, and test sets: these min/max vals are calculated using all three combined above.
-    train_data_combined = variable_time_collate_fn(train_data, device, classify=classify, activity=activity,
+    train_data_combined, train_data_Ids = variable_time_collate_fn(train_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
-    val_data_combined = variable_time_collate_fn(val_data, device, classify=classify, activity=activity,
+    val_data_combined, val_data_Ids = variable_time_collate_fn(val_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
-    test_data_combined = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
+    test_data_combined, test_data_Ids = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
+    
+    # TODO: Instead of inserting zero in the observed values array where no observed value exists, is it better to put a sufficient low mag instead, like 25?
+
+    print(train_data_combined.shape, len(train_data_Ids))
 
     print(f'train_data_combined.shape, val_data_combined.shape, test_data_combined.shape: {train_data_combined.shape, val_data_combined.shape, test_data_combined.shape}')
     print('Printing train_data_combined[0, :, -1], test_data_combined[0, :, -1] => these are the time values (after all processing and to be used in the model) where the min value must be zero and maximum value must be one. Max value can also be less than one, but must not be greater than one.')
@@ -189,29 +232,45 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     max_seq_len = max(seq_len_all)  # max_seq_len does not denote the maximum time duration, i.e., if max_seq_len = 60, it doesn't mean 60 hours/minutes.
     print(f'Max. sequence length (or the max no. of datapoints of lightcurves) in the dataset (max_seq_len): {max_seq_len}')
-    print('TODO: max_seq_len AND THE MAX(1ST DIMENSION OF TRAIN_DATA_COMBINED, VAL_DATA_COMBINED, TEST_DATA_COMBINED) MUST BE SAME -- CHECK THAT')
+    assert max_seq_len == max([train_data_combined.shape[1], val_data_combined.shape[1], test_data_combined.shape[1]])
+    print('max_seq_len AND THE MAX(1ST DIMENSION OF TRAIN_DATA_COMBINED, VAL_DATA_COMBINED, TEST_DATA_COMBINED) MUST BE SAME -- CHECK THAT')
     #########################
 
-    train_loader = DataLoader(train_data_combined, batch_size=train_batch_size, num_workers=2, shuffle=True)
-    val_loader = DataLoader(val_data_combined, batch_size=1, num_workers=2, shuffle=False)
-    test_loader = DataLoader(test_data_combined, batch_size=1, num_workers=2, shuffle=False)
+    # Create a tensor dataset just for the sake of storing the objectIds corresponding to each light curve, which may be helpful downstream. Especially for analysis while testing.
+    #print(train_data_objId)
+    #print(train_data_combined.shape)
+    #train_data_combined = Dataset(train_data_combined, train_data_objId)
+    #val_data_combined = Dataset(val_data_combined, val_data_objId)
+    #test_data_combined = Dataset(test_data_combined, test_data_objId)
+
+    # Below three lines added latest by me.
+    train_dataset = MyDataSet(train_data_combined, train_data_Ids)
+    val_dataset = MyDataSet(val_data_combined, val_data_Ids)
+    test_dataset = MyDataSet(test_data_combined, test_data_Ids)
+
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, num_workers=2, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=2, shuffle=False)
 
     # Since total_common_finkclass may be heterogenous, we pad them just for convenience before saving as an numpy array.
     # Credit for below code: https://stackoverflow.com/a/43146373
+    # TODO: Padding can be avoided if you use np.savez. Can keep total_common_finkclasses as a list here and in the main_processing.py, can use np.savez instead. LOW_PRIORITY
     pad = len(max(total_common_finkclasses, key=len))
     total_common_finkclasses = np.array([i + [0]*(pad-len(i)) for i in total_common_finkclasses])
 
-    train_data_objId_raw = le.inverse_transform(train_data_objId)
-    val_data_objId_raw = le.inverse_transform(val_data_objId)
-    test_data_objId_raw = le.inverse_transform(test_data_objId)
-    
+    #train_data_objId_raw = le.inverse_transform(train_data_objId)
+    #val_data_objId_raw = le.inverse_transform(val_data_objId)
+    #test_data_objId_raw = le.inverse_transform(test_data_objId)
+ 
     data_obj = {
         #"final_data": np.array(total_data),  # This may give error since total_data is a list containing variable length entries.
+        "duration_lcs": np.array(duration_lcs),
+        "min_max_magdiffs": np.array(min_max_magdiffs),
         "total_objIds": np.array(total_objId),
-        "train_objIds": train_data_objId_raw,
-        "val_objIds": val_data_objId_raw,
-        "test_objIds": test_data_objId_raw,
-        "total_objIds_encoded": np.array(total_objId_encoded),
+        "train_objIds": train_data_objId,
+        "val_objIds": val_data_objId,
+        "test_objIds": test_data_objId,
+        #"total_objIds_encoded": np.array(total_objId_encoded),
         "total_common_finkclasses": total_common_finkclasses,
         "train_dataloader": train_loader,
         "test_dataloader": test_loader,

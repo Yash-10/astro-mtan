@@ -18,16 +18,24 @@ sample_tp = 1.0
 num_sample = 1
 embed_time = 128
 dim = 2
+seed = 42
 store_decoded_lcs = True
+
+# Set seed during testing as well since this script samples random values for the variable, epsilon.
+torch.manual_seed(seed)
+np.random.seed(seed)
+
+if device == 'cuda':
+    torch.cuda.manual_seed(seed)
 
 #train_loader = torch.load('train_dataloader.pth')
 test_loader = torch.load('test_dataloader.pth')
 total_objIds = np.load('total_objIds.npy')
-total_objIds_encoded = np.load('total_objIds_encoded.npy')
+#total_objIds_encoded = np.load('total_objIds_encoded.npy')
 
-le = preprocessing.LabelEncoder()
-total_objIds_encoded_again  = le.fit_transform(total_objIds)  # use le.inverse_transform to get the string from the encoded value.
-assert np.all(total_objIds_encoded == total_objIds_encoded_again)  # since the label encoding must be deterministic. So the values here and found during main_preprocessing must match.
+#le = preprocessing.LabelEncoder()
+#total_objIds_encoded_again  = le.fit_transform(total_objIds)  # use le.inverse_transform to get the string from the encoded value.
+#assert np.all(total_objIds_encoded == total_objIds_encoded_again)  # since the label encoding must be deterministic. So the values here and found during main_preprocessing must match.
 
 
 rec = enc_mtan_rnn(
@@ -46,10 +54,12 @@ dec.load_state_dict(model_file['dec_state_dict'])
 dec.eval()
 
 outputs = []
+objIds = []
 if store_decoded_lcs:
     decoded_lcs = []
 with torch.no_grad():
-    for test_batch in test_loader:  # TODO: I SHOULD SAVE THE OUTPUTS BUT ALSO THE CORRESPONDING OBJECT IDS SINCE DATALOADER ITERATION MAY NOT BE DETERMINISTIC.
+    for batch in test_loader:  # TODO: I SHOULD SAVE THE OUTPUTS BUT ALSO THE CORRESPONDING OBJECT IDS SINCE DATALOADER ITERATION MAY NOT BE DETERMINISTIC.
+        test_batch = batch[0]
         test_batch = test_batch.to(device)
         observed_data, observed_mask, observed_tp = (
             test_batch[:, :, :dim],
@@ -73,6 +83,7 @@ with torch.no_grad():
         z0 = epsilon * torch.exp(0.5 * qz0_logvar) + qz0_mean
         z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
         outputs.append(z0)
+        objIds.append(batch[1])
 
         if store_decoded_lcs:
             batch, seqlen = observed_tp.size()
@@ -94,7 +105,11 @@ with torch.no_grad():
 outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow.
 print(outputs_condensed.shape)
 
+from itertools import chain
+objIds = list(chain.from_iterable(objIds))
+
 np.save('test_outputs_condensed.npy', outputs_condensed)
+np.save('test_objIds_dataloader.npy', objIds)
 
 if store_decoded_lcs:
     np.savez('test_decoded_lcs.npz', *decoded_lcs)

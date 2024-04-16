@@ -47,16 +47,24 @@ def normalize_masked_data(data, mask, att_min, att_max):
         raise Exception("nans!")
 
     # set masked out elements back to zero
+    # NOTE: I have confirmed that if I replace all unobserved values to 23 instead of 0, then the training, validation, and testing, nothing is affected.
     data_norm[mask == 0] = 0
 
     return data_norm, att_min, att_max
 
 
-def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda"):
+def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_coef=None, k_iwae=None, return_mse=True):
+    """
+    If return_mse is False, the average ELBO will be returned. In this case, both kl_coef and k_iwae must be provided.
+    If return_mse is True, mse is returned.
+    """
     mse, test_n = 0.0, 0.0
+    test_loss = 0
     with torch.no_grad():
-        for test_batch in test_loader:
+        for batch in test_loader:
+            test_batch = batch[0]
             test_batch = test_batch.to(device)
+            batch_len = test_batch.shape[0]
             observed_data, observed_mask, observed_tp = (
                 test_batch[:, :, :dim],
                 test_batch[:, :, dim: 2 * dim],
@@ -87,7 +95,18 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda"):
             pred_x = pred_x.mean(0)
             mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
             test_n += batch
-    return mse / test_n
+
+            # NOTE: Below code added by me.
+            # compute loss
+            logpx, analytic_kl = mtan_utils.compute_losses(
+                dim, test_batch, qz0_mean, qz0_logvar, pred_x, args, device)
+            loss = -(torch.logsumexp(logpx - kl_coef * analytic_kl, dim=0).mean(0) - np.log(args.k_iwae))
+            test_loss += loss.item() * batch_len
+
+    if return_mse:
+        return mse / test_n
+    else:
+        return test_loss / test_n
 
 
 def compute_losses(dim, dec_train_batch, qz0_mean, qz0_logvar, pred_x, args, device):
@@ -252,6 +271,11 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
         else:
             combined_labels = torch.zeros([len(batch), N]).to(device)
 
+
+    # NOTE: Added by me
+    #combined_record_ids = torch.zeros([len(batch), 1], dtype=object)
+    combined_record_ids = []
+
     for b, (record_id, tt, vals, mask, labels) in enumerate(batch):
         print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
 
@@ -271,6 +295,10 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
                 combined_labels[b, :currlen] = labels.to(device)
             else:
                 combined_labels[b] = labels.to(device)
+        
+        # NOTE: Added by me
+        # combined_record_ids[b] = record_id
+        combined_record_ids.append(record_id)
 
     """  # This was the code used in mTAN. We use min/max statistics of the data itself for normalizing. So that's why it's done inside the for loop.
     if not activity:
@@ -286,7 +314,7 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
     if classify:
         return combined_data, combined_labels
     else:
-        return combined_data
+        return combined_data, combined_record_ids
 
 def irregularly_sampled_data_gen(n=10, length=20, seed=0):
     np.random.seed(seed)

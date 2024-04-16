@@ -76,7 +76,7 @@ def preprocessing_alert_folders(topic_path):
 
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
-        lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4)
+            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)  # TODO: The last condition is temporary until we modify the loss function to not get affected by different length lcs.
     )
 
 
@@ -91,8 +91,8 @@ def preprocessing_alert_folders(topic_path):
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
 
     ################### Adding alerts manually #######################################
-    #tns_processed_alerts = get_tns_tde_alerts()
-    #df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
+    tns_processed_alerts = get_tns_tde_alerts()
+    df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
     ##################################################################################
 
     return df_alerts
@@ -108,9 +108,11 @@ torch.save(data_obj["val_dataloader"], 'val_dataloader.pth')
 np.save('total_objIds.npy', data_obj["total_objIds"])
 np.save('train_objIds.npy', data_obj["train_objIds"])
 np.save('val_objIds.npy', data_obj["val_objIds"])
-np.save('test_objIds.npy', data_obj["test_objIds"])
-np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
+#np.save('test_objIds.npy', data_obj["test_objIds"])
+#np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
 np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
+np.save('duration_lcs.npy', data_obj["duration_lcs"])
+np.save('min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
 
 """
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.

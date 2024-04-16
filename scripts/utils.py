@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import pandas as pd
 
+import matplotlib.pyplot as plt
+
 def get_dirs(topic_path):
     """Prints the no. of alerts for each fink class."""
     DIRS = f'{topic_path}/*'
@@ -25,7 +27,8 @@ def get_lc(
         df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd',
         objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass',
         #extract_subset=False, start_index=None, end_index=None
-        make_first_time_zero=True, convert_to_tensor=False, normalize_times=False
+        make_first_time_zero=True, convert_to_tensor=False, normalize_times=False,
+        local_time_normalization=False, max_time=None, min_time=None
     ):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
     
@@ -75,7 +78,7 @@ def get_lc(
 
     if normalize_times:
         # NOTE: If you use get_lc for different length light curves, note the possible caveat that a normalized time value of 1 means the same for two very different length light curves. It's possible that despite this, the relative difference in the times already encodes the information about different duration/length light curves. Not sure definitively.
-        times = normalize_time_values(times)
+        times = normalize_time_values(times, local_time_normalization=local_time_normalization, max_time=max_time, min_time=min_time)
 
     if finkclass_column is not None:  # finkclass_column will be None when getting the light curve from the API service instead of polling the alerts.
         common_finkclasses = df_alerts[df_alerts[objectId_column] == name][finkclass_column].mode().tolist()
@@ -91,11 +94,17 @@ def get_lc(
 
     return data
 
-def normalize_time_values(times):
+def normalize_time_values(times, local_time_normalization=False, max_time=None, min_time=None):
     """`times` must start with zero and be in units of hours. This function assumes that.
     times are multipled by 48 after normalization which means the normalized time valus lie in [0, 48] hours.
     """
-    normalized_times = (times - np.min(times)) / (np.max(times) - np.min(times))
+    if local_time_normalization:
+        normalized_times = (times - np.min(times)) / (np.max(times) - np.min(times))
+    else:  # Means global normalization must be used. In this case, max_time argument will be used.
+        if max_time is None or min_time is None:
+            raise ValueError("max_time and min_time both must be provided if using global time normalization.")
+        assert max_time > np.min(times)  # Otherwise time will become negative.
+        normalized_times = (times - min_time) / (max_time - min_time)
     normalized_times *= 48  # Doing this is not needed since anyways variable_time_collate_fn will normalize to the [0, 1] range.
     return normalized_times
 
@@ -195,6 +204,55 @@ def plot_lc(
     # """
     # print(msg)
 
+
+def plot_lc_normalized_data(observed_data, observed_mask, observed_tp, title=None):
+    """Just like plot_lc() but plots normalized data (i.e., after all preprocessing on magnitudes and times), just before inputting them to the model.
+
+    combined_data must be a tuple of (observed_data, observed_mask, time) coming from a dataloader (since it must be normalized).
+    observed_data shape: [1, lc_length, dim]
+    observed_mask shape: [1, lc_length, dim]
+    observed_tp shape: [1, lc_length, 1]
+
+    Below is an example code to do that:
+    ```
+    dim = 2
+    test_loader = torch.load('test_dataloader.pth')
+    batch = next(iter(test_loader))
+    data = batch[0]
+
+    # `index` below controls which image in this batch should be shown.
+    index = 0
+    assert index <= batch_len - 1
+
+    batch_len = data.shape[0]
+    observed_data = data[index, :, :dim].cpu().detach().numpy()
+    observed_mask = data[index, :, dim:2 * dim].cpu().detach().numpy()
+    observed_tp = data[index, :, -1].cpu().detach().numpy()
+    ```
+    """
+    dim = 2
+    # Replace observed values that are zero with nan since they are unobserved and must not show as zero in the plot.
+    observed_data[observed_data == 0] = np.nan
+
+    # Colors to plot
+    colordic = {1: 'C0', 2: 'C1'}
+
+    # Labels of ZTF filters
+    filtdic = {1: 'g', 2: 'r'}
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 6))
+    for i in range(dim):
+        ax.plot(
+            observed_tp.squeeze(), observed_data[:, i],
+            ls = '', marker='o', color=colordic[i+1], label=filtdic[i+1]
+        )
+
+    plt.gca().invert_yaxis()
+    plt.legend()
+    plt.title(f'{title}')
+    plt.xlabel('Normalized time')
+    plt.ylabel('Normalized magnitude')
+    plt.show()
 
 def pad_rows_to_match_columns(array, target_columns):
     """

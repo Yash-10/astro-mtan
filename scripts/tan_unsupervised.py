@@ -103,13 +103,13 @@ if __name__ == '__main__':
         print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 30), device=device)
         print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 50), device=device)
 
-    best_val_mse = float('inf')
+    best_val_metric = float('inf')  # NOTE: It is assumed the val metric must be minimized.
     total_time = 0.
     for itr in range(1, args.niters + 1):
         train_loss = 0
         train_n = 0
         avg_reconst, avg_kl, mse = 0, 0, 0
-        val_avg_reconst, val_avg_kl, val_mse, val_loss = 0, 0, 0, 0
+        val_avg_reconst, val_avg_kl, val_loss = 0, 0, 0
         if args.kl:
             wait_until_kl_inc = 10
             if itr < wait_until_kl_inc:
@@ -121,7 +121,8 @@ if __name__ == '__main__':
 
         start_time = time.time()
 
-        for train_batch in train_loader:
+        for batch in train_loader:
+            train_batch = batch[0]  # batch contains the tensor and also the labels due to th e recent change in the code.
             train_batch = train_batch.to(device)
             batch_len = train_batch.shape[0]
             observed_data = train_batch[:, :, :dim]
@@ -166,10 +167,9 @@ if __name__ == '__main__':
         
         total_time += time.time() - start_time
         # Run validation
-        # TODO: this means we validate using the MSE. Not sure if we should use the reconstruction loss, the KL loss or some combination of it instead. The mTAN paper used MSE as the test metric.
-        val_mse = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device)
-        if val_mse <= best_val_mse:
-            best_val_mse = min(best_val_mse, val_mse)
+        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, k_iwae=args.k_iwae, return_mse=False)
+        if val_metric <= best_val_metric:
+            best_val_metric = min(best_val_metric, val_metric)
             rec_state_dict = rec.state_dict()
             dec_state_dict = dec.state_dict()
             optimizer_state_dict = optimizer.state_dict()
@@ -184,11 +184,11 @@ if __name__ == '__main__':
             }, args.dataset + '_' + args.enc + '_' + args.dec + '_' + '.h5')
 
         # Validation end.
-        scheduler.step(val_mse)
+        scheduler.step(val_metric)
         print(f'learning rate at iteration {itr} = {scheduler.get_last_lr()}')
 
-        print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_mse: {:.6f}'
-                .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_mse))
+        print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_metric: {:.6f}'
+                .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_metric))
         if itr % 5 == 0:
             print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device))
 
