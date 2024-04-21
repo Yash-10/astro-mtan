@@ -140,7 +140,7 @@ def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_col
     return data
 
 def plot_lc(
-        df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd',
+        df_alerts, name, title_suffix='', fid_column='fid', magpsf_column='magpsf', jd_column='jd',
         sigmapsf_column='sigmapsf', finkclass_column='finkclass', objectId_column='objectId'
 ):
     """Plots photometry for the given name (objectId) from the alerts dataframe.
@@ -193,7 +193,7 @@ def plot_lc(
 
     plt.gca().invert_yaxis()
     plt.legend()
-    plt.title(f'{pdf[objectId_column].unique()[0]}')
+    plt.title(f'{pdf[objectId_column].unique()[0]}'+': '+title_suffix)
     plt.xlabel('Modified Julian Date')
     plt.ylabel('Magnitude')
     plt.show()
@@ -248,10 +248,10 @@ def plot_lc_normalized_data(observed_data, observed_mask, observed_tp, title=Non
         )
 
     plt.gca().invert_yaxis()
-    plt.legend()
-    plt.title(f'{title}')
-    plt.xlabel('Normalized time')
-    plt.ylabel('Normalized magnitude')
+    ax.legend()
+    ax.set_title(f'{title}')
+    ax.set_xlabel('Normalized time')
+    ax.set_ylabel('Normalized magnitude')
     plt.show()
 
 def pad_rows_to_match_columns(array, target_columns):

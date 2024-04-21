@@ -96,12 +96,12 @@ if __name__ == '__main__':
         dec.load_state_dict(checkpoint['dec_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         print('loading saved weights', checkpoint['epoch'])
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 3), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 10), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 20), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 30), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 50), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 3, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 10, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 20, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 30, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 50, return_mse=True), device=device)
 
     best_val_metric = float('inf')  # NOTE: It is assumed the val metric must be minimized.
     total_time = 0.
@@ -129,7 +129,7 @@ if __name__ == '__main__':
             observed_mask = train_batch[:, :, dim:2 * dim]
             observed_tp = train_batch[:, :, -1]
             if args.sample_tp and args.sample_tp < 1:
-                # NOTE: I think this was designed for synthetic experiments (see Appendix A2 of the mTAN paper).
+                # NOTE: I think this was designed for synthetic experiments (see Appendix A2 of the mTAN paper), perhaps for creating train-test splits in a given lc to cehck interpolation performance.
                 # So this subsampling is not needed in our case since we only deal with observations.
                 subsampled_data, subsampled_tp, subsampled_mask = mtan_utils.subsample_timepoints(
                     observed_data.clone(), observed_tp.clone(), observed_mask.clone(), args.sample_tp)
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         
         total_time += time.time() - start_time
         # Run validation
-        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, k_iwae=args.k_iwae, return_mse=False)
+        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, return_mse=False)
         if val_metric <= best_val_metric:
             best_val_metric = min(best_val_metric, val_metric)
             rec_state_dict = rec.state_dict()
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_metric: {:.6f}'
                 .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_metric))
         if itr % 5 == 0:
-            print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device))
+            print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device, return_mse=True))
 
     print(f'Time elapsed {total_time/60:.2f} min')
 

@@ -53,11 +53,13 @@ def normalize_masked_data(data, mask, att_min, att_max):
     return data_norm, att_min, att_max
 
 
-def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_coef=None, k_iwae=None, return_mse=True):
+def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_coef=None, return_mse=True):
     """
-    If return_mse is False, the average ELBO will be returned. In this case, both kl_coef and k_iwae must be provided.
+    If return_mse is False, the average ELBO will be returned. In this case, both kl_coef and k_iwae will be used; the latter is found from `args` and kl_coef must be given.
     If return_mse is True, mse is returned.
     """
+    if not return_mse and kl_coef is None:
+        raise ValueError('kl_coef must be provided is return_mse is False.')
     mse, test_n = 0.0, 0.0
     test_loss = 0
     with torch.no_grad():
@@ -98,10 +100,11 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
 
             # NOTE: Below code added by me.
             # compute loss
-            logpx, analytic_kl = mtan_utils.compute_losses(
-                dim, test_batch, qz0_mean, qz0_logvar, pred_x, args, device)
-            loss = -(torch.logsumexp(logpx - kl_coef * analytic_kl, dim=0).mean(0) - np.log(args.k_iwae))
-            test_loss += loss.item() * batch_len
+            if not return_mse:
+                logpx, analytic_kl = compute_losses(
+                    dim, test_batch, qz0_mean, qz0_logvar, pred_x, args, device)
+                loss = -(torch.logsumexp(logpx - kl_coef * analytic_kl, dim=0).mean(0) - np.log(args.k_iwae))
+                test_loss += loss.item() * batch_len
 
     if return_mse:
         return mse / test_n

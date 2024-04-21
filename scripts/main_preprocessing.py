@@ -8,7 +8,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-04_579178_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-17_832975_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -76,7 +76,7 @@ def preprocessing_alert_folders(topic_path):
 
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
-            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)  # TODO: The last condition is temporary until we modify the loss function to not get affected by different length lcs.
+            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)
     )
 
 

@@ -150,12 +150,12 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     # FIRST, we do the loop only to find the min/max times across the dataset. Then the second loop performs the global time normalization using the max time found in the first loop.
     min_time, max_time, duration_lcs, min_max_magdiffs = np.Inf, -np.Inf, [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, local_time_normalization=True, max_time=None, min_time=None)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, max_time=None, min_time=None)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         assert lc_data[0] == objId
         #assert lc_data[1][0] == 0.0  # Because lc_data[1] is the time array and it must start with zero because we use make_first_time_zero=True above.
-        if lc_data[1][0] < min_time:
+        if lc_data[1][0].numpy()[0] < min_time:
             min_time = lc_data[1][0].numpy()[0]
-        if lc_data[1][-1] > max_time:
+        if lc_data[1][-1].numpy()[0] > max_time:
             max_time = lc_data[1][-1].numpy()[0]
         duration_lcs.append(float(lc_data[1][-1] - lc_data[1][0]))
         _lc_data_obs = lc_data[2]
@@ -188,7 +188,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     # TODO: should we use stratified split? stratifying based on the most common finkclass across all alerts of a given objId --> can do for classification, not required for unsupervised learning.
     # TODO: Ensure that using random_state=42 and shuffle=True gives the same output since I am using train_test_independently for splitting the data and the objIds.
-    # TODO: ensure multiple runs of label encoding on the same number gives the same encoded value.
+    # ensure multiple runs of label encoding on the same number gives the same encoded value. UPDATE: Not applicable now since we are not encoding the labels anymore.
     # We are encoding the objectIds just for efficiency because string types may not be efficient with PyTorch.
     # NOTE: I commented the below two lines since I am thinking the labels need NOT be encoded, and can keep it as strings only.
     #le = preprocessing.LabelEncoder()
@@ -216,7 +216,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     test_data_combined, test_data_Ids = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
     
-    # TODO: Instead of inserting zero in the observed values array where no observed value exists, is it better to put a sufficient low mag instead, like 25?
+    # Q) Instead of inserting zero in the observed values array where no observed value exists, is it better to put a sufficient low mag instead, like 25?
+    # Answer: I have confirmed that training, validation, and testing does NOT get affected by keeping unobserved values as 0 or 23 because these are essentially masked anyways.
 
     print(train_data_combined.shape, len(train_data_Ids))
 

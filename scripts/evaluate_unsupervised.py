@@ -7,8 +7,8 @@ import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
-num_ref_points = 16
-latent_dim = 16
+num_ref_points = 160
+latent_dim = 1
 learn_emb = True
 rec_hidden = 64
 gen_hidden = 50
@@ -47,7 +47,7 @@ dec = dec_mtan_rnn(
     dim, torch.linspace(0, 1., num_ref_points), latent_dim, gen_hidden,
     embed_time=embed_time, learn_emb=learn_emb, num_heads=dec_num_heads).to(device)
 
-model_file = torch.load('ftransfer_ztf_2024-04-04_579178_copy_mtan_rnn_mtan_rnn_.h5')
+model_file = torch.load('ftransfer_ztf_2024-04-17_832975_copy_mtan_rnn_mtan_rnn_.h5')
 rec.load_state_dict(model_file['rec_state_dict'])
 rec.eval()
 dec.load_state_dict(model_file['dec_state_dict'])
@@ -58,7 +58,7 @@ objIds = []
 if store_decoded_lcs:
     decoded_lcs = []
 with torch.no_grad():
-    for batch in test_loader:  # TODO: I SHOULD SAVE THE OUTPUTS BUT ALSO THE CORRESPONDING OBJECT IDS SINCE DATALOADER ITERATION MAY NOT BE DETERMINISTIC.
+    for batch in test_loader:
         test_batch = batch[0]
         test_batch = test_batch.to(device)
         observed_data, observed_mask, observed_tp = (
@@ -102,7 +102,7 @@ with torch.no_grad():
                 )
             )
 
-outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow.
+outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow if it contains more than one entry.
 print(outputs_condensed.shape)
 
 from itertools import chain
