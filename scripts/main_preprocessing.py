@@ -47,7 +47,9 @@ def preprocessing_alert_folders(topic_path):
             shutil.move(raw_dir, STARS_DIR)
             df_alerts.finkclass.replace(dir, 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir in sn_list:
+        elif dir == 'SN' or dir == 'SN%20candidate':  # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
+        #elif dir in sn_list:
+            #if df_alerts.tnsclass.isin(sn_list):  # TODO: Not sure if this condition is needed. Sometimes the tnsclass in these cases may contain "Unknown" as well, so this condition removes those cases. But if it's needed or not is not entirely clear.
             shutil.move(raw_dir, SN_DIR)
             df_alerts.finkclass.replace(dir, 'custom_sn', inplace=True)
             # shutil.rmtree(raw_dir)
@@ -74,6 +76,9 @@ def preprocessing_alert_folders(topic_path):
     #)
     #############################################################################################################
 
+    # NOTE: Below line temporarily added. Remove after experiment done.
+    df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate')]
+
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
             lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)
@@ -90,8 +95,8 @@ def preprocessing_alert_folders(topic_path):
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
 
     ################### Adding alerts manually #######################################
-    tns_processed_alerts = get_tns_tde_alerts()
-    df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
+    #tns_processed_alerts = get_tns_tde_alerts()
+    #df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
     ##################################################################################
 
     return df_alerts

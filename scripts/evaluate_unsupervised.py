@@ -54,7 +54,7 @@ rec = enc_mtan_rnn(
 
 dec = dec_mtan_rnn(
     dim, torch.linspace(0, 1., num_ref_points), latent_dim, gen_hidden,
-    embed_time=embed_time, learn_emb=learn_emb, num_heads=dec_num_heads).to(device)
+    embed_time=embed_time, learn_emb=learn_emb, num_heads=dec_num_heads, device=device).to(device)
 
 model_file = torch.load('ftransfer_ztf_2024-04-17_832975_copy_mtan_rnn_mtan_rnn_.h5')
 rec.load_state_dict(model_file['rec_state_dict'])

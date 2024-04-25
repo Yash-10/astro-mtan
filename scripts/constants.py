@@ -1,6 +1,7 @@
 # We collate come subclasses into a single class based on the below rule.
+# RECALL: The "*" ASCII character is replaced by "%2A" in the URL-encoding format in all below class names wherever applicable. This is only to match the corresponding names of directories in the alert folder.
 agn_list = ['AGN','Blazar','BLLac','LINER','QSO','Seyfert', 'Seyfert_1', 'Seyfert_2']
-stars_list = ['EB*','LMXB','RRLyr','RotV*','Star','WD*','low-mass*']
+stars_list = ['EB%2A','LMXB','RRLyr','RotV%2A','Star','WD%2A','low-mass%2A']
 # We decided not to use simbad_galaxies_list.
 simbad_galaxies_list = [
         "galaxy",
@@ -25,4 +26,5 @@ simbad_galaxies_list = [
         "Void",
     ]
 
+# While the agn and stars list are used in the preprcessing of the alert folders, the sn_list below is not used since the alert folders don't contain these granular classes, but only "SN" and "SN candidate". See main_preprocessing.py for details. Recall that simbad_galaxies_list is no longer used, although kept for storage purposes.
 sn_list = ["(TNS) SLSN-I","(TNS) SLSN-II","(TNS) SN","(TNS) SN I","(TNS) SN Ia","(TNS) SN Ia-91bg-like","(TNS) SN Ia-91T-like","(TNS) SN Ia-CSM","(TNS) SN Ia-pec","(TNS) SN Iax[02cx-like]","(TNS) SN Ib","(TNS) SN Ib-Ca-rich","(TNS) SN Ib-pec","(TNS) SN Ib/c","(TNS) SN Ibn","(TNS) SN Ic","(TNS) SN Ic-BL","(TNS) SN Ic-pec","(TNS) SN Icn","(TNS) SN II","(TNS) SN II-pec","(TNS) SN IIb","(TNS) SN IIL","(TNS) SN IIn","(TNS) SN IIn-pec","(TNS) SN IIP"]
