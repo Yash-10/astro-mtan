@@ -215,6 +215,10 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
                                                       data_min=data_min, data_max=data_max)
     test_data_combined, test_data_Ids = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
+
+    assert np.all(train_data_objId == train_data_Ids)
+    assert np.all(test_data_objId == test_data_Ids)
+    assert np.all(val_data_objId == val_data_Ids)
     
     # Q) Instead of inserting zero in the observed values array where no observed value exists, is it better to put a sufficient low mag instead, like 25?
     # Answer: I have confirmed that training, validation, and testing does NOT get affected by keeping unobserved values as 0 or 23 because these are essentially masked anyways.
@@ -271,6 +275,9 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         "train_objIds": train_data_objId,
         "val_objIds": val_data_objId,
         "test_objIds": test_data_objId,
+        "train_data_combined": train_data_combined,
+        "val_data_combined": val_data_combined,
+        "test_data_combined": test_data_combined,
         #"total_objIds_encoded": np.array(total_objId_encoded),
         "total_common_finkclasses": total_common_finkclasses,
         "train_dataloader": train_loader,

@@ -122,7 +122,7 @@ if __name__ == '__main__':
         start_time = time.time()
 
         for batch in train_loader:
-            train_batch = batch[0]  # batch contains the tensor and also the labels due to th e recent change in the code.
+            train_batch = batch[0]  # batch contains the tensor and also the labels due to the recent change in the code.
             train_batch = train_batch.to(device)
             batch_len = train_batch.shape[0]
             observed_data = train_batch[:, :, :dim]
@@ -136,6 +136,13 @@ if __name__ == '__main__':
             else:
                 subsampled_data, subsampled_tp, subsampled_mask = \
                     observed_data, observed_tp, observed_mask
+
+            if args.sample_tp == 1.:
+                assert torch.all(observed_tp == subsampled_tp)
+
+            assert subsampled_tp.max() <= 1
+            ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
+
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
             qz0_mean = out[:, :, :args.latent_dim]
             qz0_logvar = out[:, :, args.latent_dim:]

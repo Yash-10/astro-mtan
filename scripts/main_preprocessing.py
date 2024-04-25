@@ -79,7 +79,6 @@ def preprocessing_alert_folders(topic_path):
             lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)
     )
 
-
     print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
 
     for objectId in df_alerts['objectId'].unique():
@@ -105,6 +104,9 @@ data_obj = prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, c
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')
 torch.save(data_obj["val_dataloader"], 'val_dataloader.pth')
+torch.save(data_obj["train_data_combined"], 'train_data_combined.pth')
+torch.save(data_obj["val_data_combined"], 'val_data_combined.pth')
+torch.save(data_obj["test_data_combined"], 'test_data_combined.pth')
 np.save('total_objIds.npy', data_obj["total_objIds"])
 np.save('train_objIds.npy', data_obj["train_objIds"])
 np.save('val_objIds.npy', data_obj["val_objIds"])

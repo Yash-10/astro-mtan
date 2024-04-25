@@ -78,6 +78,13 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
             else:
                 subsampled_data, subsampled_tp, subsampled_mask = \
                     observed_data, observed_tp, observed_mask
+
+            if args.sample_tp == 1.:
+                assert torch.all(observed_tp == subsampled_tp)
+
+            assert subsampled_tp.max() <= 1
+            ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
+
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
             qz0_mean, qz0_logvar = (
                 out[:, :, : args.latent_dim],

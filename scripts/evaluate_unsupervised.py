@@ -1,13 +1,15 @@
 from models import enc_mtan_rnn, dec_mtan_rnn
-from mtan_utils import subsample_timepoints
+from mtan_utils import subsample_timepoints, mean_squared_error
 from sklearn import preprocessing
 import torch
 import numpy as np
 
+from torch.utils.data import DataLoader
+from prepare_data import MyDataSet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
-num_ref_points = 160
+num_ref_points = 16
 latent_dim = 1
 learn_emb = True
 rec_hidden = 64
@@ -20,6 +22,9 @@ embed_time = 128
 dim = 2
 seed = 42
 store_decoded_lcs = True
+# NOTE: Change the below two lines based on which dataset to evaluate the model on.
+DATA_COMBINED_PATH = 'train_data_combined.pth'
+DATA_IDS_PATH = 'train_objIds.npy'
 
 # Set seed during testing as well since this script samples random values for the variable, epsilon.
 torch.manual_seed(seed)
@@ -28,9 +33,13 @@ np.random.seed(seed)
 if device == 'cuda':
     torch.cuda.manual_seed(seed)
 
-#train_loader = torch.load('train_dataloader.pth')
-test_loader = torch.load('test_dataloader.pth')
-total_objIds = np.load('total_objIds.npy')
+data_combined = torch.load(DATA_COMBINED_PATH)
+data_Ids = np.load(DATA_IDS_PATH)
+dataset = MyDataSet(data_combined, data_Ids)
+test_loader = DataLoader(dataset, batch_size=1, num_workers=2, shuffle=False)
+
+#test_loader = torch.load('test_dataloader.pth') # NOTE: This script is only tested for dataloaders with batch size=1; for greater batch sizes, some bugs may be introduced. TODO: Fix this so can I also use train dataloader when needed to get results on the train set, for example.
+#total_objIds = np.load('total_objIds.npy')
 #total_objIds_encoded = np.load('total_objIds_encoded.npy')
 
 #le = preprocessing.LabelEncoder()
@@ -55,6 +64,7 @@ dec.eval()
 
 outputs = []
 objIds = []
+test_n, mse = 0, 0.0
 if store_decoded_lcs:
     decoded_lcs = []
 with torch.no_grad():
@@ -72,6 +82,12 @@ with torch.no_grad():
         else:
             subsampled_data, subsampled_tp, subsampled_mask = \
                 observed_data, observed_tp, observed_mask
+
+        if sample_tp == 1.:
+            assert torch.all(observed_tp == subsampled_tp)
+        assert subsampled_tp.max() <= 1
+        ##query = torch.linspace(0, subsampled_tp.max(), num_ref_points)
+
         out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
         qz0_mean, qz0_logvar = (
             out[:, :, : latent_dim],
@@ -93,7 +109,8 @@ with torch.no_grad():
             pred_x = dec(z0, time_steps)
             pred_x = pred_x.view(num_sample, -1, pred_x.shape[1], pred_x.shape[2])
             pred_x = pred_x.mean(0)
-            #mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
+            mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
+            test_n += batch
 
             print(pred_x.shape, time_steps.shape, time_steps.unsqueeze(2).shape)
             decoded_lcs.append(
@@ -108,8 +125,12 @@ print(outputs_condensed.shape)
 from itertools import chain
 objIds = list(chain.from_iterable(objIds))
 
-np.save('test_outputs_condensed.npy', outputs_condensed)
-np.save('test_objIds_dataloader.npy', objIds)
+print(f'MSE = {mse/test_n}')
+
+np.save('evaluate_outputs_condensed.npy', outputs_condensed)
+np.save('evaluate_objIds_dataloader.npy', objIds)
+
+assert np.all(objIds == data_Ids)
 
 if store_decoded_lcs:
-    np.savez('test_decoded_lcs.npz', *decoded_lcs)
+    np.savez('evaluate_decoded_lcs.npz', *decoded_lcs)

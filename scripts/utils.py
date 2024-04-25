@@ -105,7 +105,7 @@ def normalize_time_values(times, local_time_normalization=False, max_time=None, 
             raise ValueError("max_time and min_time both must be provided if using global time normalization.")
         assert max_time > np.min(times)  # Otherwise time will become negative.
         normalized_times = (times - min_time) / (max_time - min_time)
-    normalized_times *= 48  # Doing this is not needed since anyways variable_time_collate_fn will normalize to the [0, 1] range.
+    #normalized_times *= 48  # Doing this is not needed since anyways variable_time_collate_fn will normalize to the [0, 1] range.
     return normalized_times
 
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
