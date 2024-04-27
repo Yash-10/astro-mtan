@@ -8,7 +8,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-17_832975_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-26_572037_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -48,6 +48,7 @@ def preprocessing_alert_folders(topic_path):
             df_alerts.finkclass.replace(dir, 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
         elif dir == 'SN' or dir == 'SN%20candidate':  # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
+            # Also NOTE: "(TNS) SN ..." may also be present in other folders like AGN, but those will not be given the `custom_sn` label. This is irrelevant for the unsupervised learning, but may become important for supervised classifications.
         #elif dir in sn_list:
             #if df_alerts.tnsclass.isin(sn_list):  # TODO: Not sure if this condition is needed. Sometimes the tnsclass in these cases may contain "Unknown" as well, so this condition removes those cases. But if it's needed or not is not entirely clear.
             shutil.move(raw_dir, SN_DIR)
@@ -77,11 +78,11 @@ def preprocessing_alert_folders(topic_path):
     #############################################################################################################
 
     # NOTE: Below line temporarily added. Remove after experiment done.
-    df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate')]
+    #df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate')]
 
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
-            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4) #  and (len(group) <= 30)
+            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4)  # and (len(group) <= 30)
     )
 
     print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
@@ -104,7 +105,7 @@ def preprocessing_alert_folders(topic_path):
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
 df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}'+'.parquet')
 
-data_obj = prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, convert_to_tensor=True)
+data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True)
 
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')

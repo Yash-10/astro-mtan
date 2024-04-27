@@ -86,8 +86,7 @@ class enc_mtan_rnn(nn.Module):
             nn.Linear(50, latent_dim * 2))
         if learn_emb:
             self.periodic = nn.Linear(1, embed_time-1)
-            self.linear = nn.Linear(1, 1)
-        
+            self.linear = nn.Linear(1, 1) 
     
     def learn_time_embedding(self, tt):
         tt = tt.to(self.device)

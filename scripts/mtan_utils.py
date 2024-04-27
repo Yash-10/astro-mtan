@@ -571,5 +571,14 @@ def get_data_min_max_single_record(record):
         data_min = torch.min(data_min, batch_min)
         data_max = torch.max(data_max, batch_max)
 
+    assert data_min.numel() == n_features
+    assert data_max.numel() == n_features
+    # NOTE: We don't want filter/channel-wise min/max values since that will lose color information when normalizing.
+    # We want the min/max across all filters. So we do the below operation.
+    data_min = torch.min(data_min)
+    data_max = torch.max(data_max)
+    assert data_min.numel() == 1
+    assert data_max.numel() == 1
+
     return data_min, data_max
 

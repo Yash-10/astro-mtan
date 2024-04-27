@@ -26,7 +26,7 @@ parser.add_argument('--dec', type=str, default='mtan_rnn')
 parser.add_argument('--fname', type=str, default=None)
 parser.add_argument('--seed', type=int, default=0)
 #parser.add_argument('--n', type=int, default=8000)
-parser.add_argument('--batch-size', type=int, default=50)
+#parser.add_argument('--batch-size', type=int, default=50)
 #parser.add_argument('--quantization', type=float, default=0.016,
 #                    help="Quantization on the physionet dataset.")
 parser.add_argument('--classif', action='store_true',
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     params = (list(dec.parameters()) + list(rec.parameters()))
     optimizer = optim.Adam(params, lr=args.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
+    #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
     print('parameters:', mtan_utils.count_parameters(rec), mtan_utils.count_parameters(dec))
     if args.fname is not None:
         checkpoint = torch.load(args.fname)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
         
         total_time += time.time() - start_time
         # Run validation
-        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, return_mse=False)
+        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, return_mse=True)
         if val_metric <= best_val_metric:
             best_val_metric = min(best_val_metric, val_metric)
             rec_state_dict = rec.state_dict()
@@ -191,8 +191,8 @@ if __name__ == '__main__':
             }, args.dataset + '_' + args.enc + '_' + args.dec + '_' + '.h5')
 
         # Validation end.
-        scheduler.step(val_metric)
-        print(f'learning rate at iteration {itr} = {scheduler.get_last_lr()}')
+        #scheduler.step(val_metric)
+        #print(f'learning rate at iteration {itr} = {scheduler.get_last_lr()}')
 
         print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}, val_metric: {:.6f}'
                 .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n, val_metric))
