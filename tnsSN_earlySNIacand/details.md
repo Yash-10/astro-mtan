@@ -9,3 +9,9 @@ python3 tan_unsupervised.py --niters 200 --lr 0.001 --rec-hidden 64 --latent-dim
 ```
 The only difference in the latter is that periodic time embedding is turned off and replaced with the normal time embedding.
 
+`visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs.ipynb` uses the below training code:
+
+```bash
+python3 tan_unsupervised.py --niters 200 --lr 0.001 --rec-hidden 64 --latent-dim 2 --enc mtan_rnn --dec mtan_rnn --gen-hidden 50 --learn-emb --kl --seed 42 --num-ref-points 160 --dataset ftransfer_ztf_2024-04-26_572037_copy --sample-tp 1.0 --save 1 --k-iwae 5 --std 0.01 --norm --topic ftransfer_ztf_2024-04-26_572037_copy --dim 2 --embed-time 128
+```
+Compared to `visualization_outputs.ipynb`, changes are: latent_dim = 2, lc times are in hours instead of days (in an attempt to reduce the steepness in the rise and fall around the peak and hence improve interpolation of region around the peak). Uses 160 ref points as all above two experiments.
