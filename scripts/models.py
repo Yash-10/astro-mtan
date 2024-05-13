@@ -87,11 +87,13 @@ class enc_mtan_rnn(nn.Module):
         if learn_emb:
             self.periodic = nn.Linear(1, embed_time-1)
             self.linear = nn.Linear(1, 1) 
-    
+            #self.linear = nn.Linear(1, embed_time)
+
     def learn_time_embedding(self, tt):
         tt = tt.to(self.device)
         tt = tt.to(torch.float32)
         tt = tt.unsqueeze(-1)
+        #return self.linear(tt)
         out2 = torch.sin(self.periodic(tt))
         out1 = self.linear(tt)
         return torch.cat([out1, out2], -1)

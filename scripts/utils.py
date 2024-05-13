@@ -28,7 +28,7 @@ def get_lc(
         objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass',
         #extract_subset=False, start_index=None, end_index=None
         make_first_time_zero=True, convert_to_tensor=False, normalize_times=False,
-        local_time_normalization=False, max_time=None, min_time=None
+        local_time_normalization=False, max_time=None, min_time=None, time_in_hrs=True
     ):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
     
@@ -74,7 +74,8 @@ def get_lc(
         # As per the Physionet dataset (at least) from the mTAN paper, the times always start at zero. Their time units are also in hours. So this replicates that.
         # Make the first time to zero. The below two lines are only for machine learning purposes since the time must always start at zero for all light curves.
         times = times - times[0]
-        #times = times * 24  # to convert times into hours.
+        if time_in_hrs:
+            times = times * 24  # to convert times into hours.
 
     if normalize_times:
         # NOTE: If you use get_lc for different length light curves, note the possible caveat that a normalized time value of 1 means the same for two very different length light curves. It's possible that despite this, the relative difference in the times already encodes the information about different duration/length light curves. Not sure definitively.

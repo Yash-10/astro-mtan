@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
-from constants import agn_list, stars_list, sn_list
+from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
 TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-26_572037_copy'
 
@@ -77,8 +77,10 @@ def preprocessing_alert_folders(topic_path):
     #)
     #############################################################################################################
 
-    # NOTE: Below line temporarily added. Remove after experiment done.
+    # NOTE: Below line temporarily added to generate dataset with only SN examples. Remove after experiment done.
+    # 1. For SN dataset
     #df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate')]
+    df_alerts = df_alerts[df_alerts['finkclass'] == 'custom_agn']
 
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
@@ -92,13 +94,16 @@ def preprocessing_alert_folders(topic_path):
         assert (len(pdf) >= 10) and (len(pdf[pdf['fid'] == 1]) >= 4) and (len(pdf[pdf['fid'] == 2]) >= 4)
         #assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
 
-    print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
-    print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
-
     ################### Adding alerts manually #######################################
     #tns_processed_alerts = get_tns_tde_alerts()
     #df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
     ##################################################################################
+
+    # Some examples are manually removed. See constants.py for details.
+    df_alerts = df_alerts[~df_alerts['objectId'].isin(to_remove_objIds)]
+
+    print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
+    print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
 
     return df_alerts
 

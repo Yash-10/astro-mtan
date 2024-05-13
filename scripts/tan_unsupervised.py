@@ -1,4 +1,5 @@
 # pylint: disable=E1101, E0401, E1102, W0621, W0221
+import os
 import argparse
 import numpy as np
 import torch
@@ -46,6 +47,7 @@ parser.add_argument('--sample-tp', type=float, default=1.0)
 parser.add_argument('--dropout', type=float, default=0.0)  # TODO: Add dropout later.
 parser.add_argument('--topic', type=str, help='Name of the topic of the data transfer that contains the alerts.')
 parser.add_argument('--dim', type=int, help='dim value')
+parser.add_argument('--use_wandb', action='store_true', help='whether to use wandb')
 args = parser.parse_args()
 
 
@@ -85,6 +87,12 @@ if __name__ == '__main__':
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.gen_hidden, 
             embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device).to(device)
 
+    if args.use_wandb:  # TODO: See if wandb is working as expected and is logging what we want.
+        import wandb
+        wandb.login(key=os.environ.get('WANDB_API_KEY'))
+        run = wandb.init(project="fast_transients_mTAN", name=f'run-{experiment_id}', config=args)
+        wandb.watch(rec, log_freq=50)
+        wandb.watch(dec, log_freq=50)
 
     params = (list(dec.parameters()) + list(rec.parameters()))
     optimizer = optim.Adam(params, lr=args.lr)
@@ -171,10 +179,20 @@ if __name__ == '__main__':
             avg_kl += torch.mean(analytic_kl) * batch_len
             mse += mtan_utils.mean_squared_error(
                 observed_data, pred_x.mean(0), observed_mask) * batch_len
-        
+
+            if args.use_wandb:
+                # NOTE: Logging is done for each batch. See https://docs.wandb.ai/guides/integrations/pytorch
+                wandb.log({'train_loss': train_loss, 'train_avg_reconst': avg_reconst, 'train_avg_kl': avg_kl, 'train_mse': mse})
+ 
         total_time += time.time() - start_time
         # Run validation
-        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, return_mse=True)
+        return_mse = True
+        val_metric = mtan_utils.evaluate(dim, rec, dec, val_loader, args, 1, device=device, kl_coef=kl_coef, return_mse=return_mse)
+        if args.use_wandb:
+            if return_mse:
+                wandb.log({'val_mse': val_metric})
+            else:
+                wandb.log({'val_avg_elbo': val_metric})
         if val_metric <= best_val_metric:
             best_val_metric = min(best_val_metric, val_metric)
             rec_state_dict = rec.state_dict()

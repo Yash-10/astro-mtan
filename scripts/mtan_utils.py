@@ -33,6 +33,10 @@ def mean_squared_error(orig, pred, mask):
     error = error * mask
     return error.sum() / mask.sum()
 
+def residual(orig, pred, mask):
+    error = orig - pred
+    error = error * mask
+    return error
 
 def normalize_masked_data(data, mask, att_min, att_max):
     # we don't want to divide by zero
@@ -49,6 +53,10 @@ def normalize_masked_data(data, mask, att_min, att_max):
     # set masked out elements back to zero
     # NOTE: I have confirmed that if I replace all unobserved values to 23 instead of 0, then the training, validation, and testing, nothing is affected.
     data_norm[mask == 0] = 0
+
+    # TODO: Temp experiment. remove when done.
+    assert torch.sum((mask == 1) & (data_norm == data_norm.min())) > 0
+    data_norm[(mask == 1) & (data_norm == data_norm.min())] = 1e-5
 
     return data_norm, att_min, att_max
 

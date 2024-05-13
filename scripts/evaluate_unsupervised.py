@@ -10,7 +10,7 @@ from prepare_data import MyDataSet
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
 num_ref_points = 160
-latent_dim = 1
+latent_dim = 2
 learn_emb = True
 rec_hidden = 64
 gen_hidden = 50
