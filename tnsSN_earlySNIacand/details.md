@@ -1,5 +1,5 @@
 Things common for all notebooks:
-- Alerts: from Dec 1, 2019 to Dec 1, 2021 and using only the four criteria from the suggested filters of ZTF Avro. See https://zwickytransientfacility.github.io/ztf-avro-alert/filtering.html. Only alerts with lcs >= 10pts and >=4 pts in each band are selected.
+- Alerts: from Dec 1, 2019 to Dec 1, 2021 and using only the five criteria from the suggested filters of ZTF Avro. See https://zwickytransientfacility.github.io/ztf-avro-alert/filtering.html. Only alerts with lcs >= 10pts and >=4 pts in each band are selected.
 - NOTE: Even though the notebook shows finkclasses apart from (TNS) SN and early SN Ia candidate, that is fine since TNS SN classifications are only present in the `tnsclass` column of the alerts, not the `finkclass`. So even though the finkclass can be different from these two, they were included because they had a TNS SN identification. The TNS class histogram in the notebook makes it clear.
 - Best model selected based on val set performance. 1126 lcs for training, and 282 for val. All notebooks look at the performance on the train set itself after training (i.e., evaluation on the train set). MSE is used for validation on the val set. Trained for 200 epochs.
 
