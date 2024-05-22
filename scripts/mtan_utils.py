@@ -54,10 +54,6 @@ def normalize_masked_data(data, mask, att_min, att_max):
     # NOTE: I have confirmed that if I replace all unobserved values to 23 instead of 0, then the training, validation, and testing, nothing is affected.
     data_norm[mask == 0] = 0
 
-    # TODO: Temp experiment. remove when done.
-    assert torch.sum((mask == 1) & (data_norm == data_norm.min())) > 0
-    data_norm[(mask == 1) & (data_norm == data_norm.min())] = 1e-5
-
     return data_norm, att_min, att_max
 
 

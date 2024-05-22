@@ -163,7 +163,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         min_max_magdiffs.append(_lc_data_obs.max() - _lc_data_obs[_lc_data_obs != 0.0].min())  # Ignoring zero values for min because zero values mean unobserved.
    
     #assert min_time = 0.0   # Because first time is always zero for all lcs because we use make_first_time_zero=True.
-    print(f'Max and Min time values (in days) across the dataset: {max_time}, {min_time}')
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the dataset: {max_time}, {min_time}')
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():

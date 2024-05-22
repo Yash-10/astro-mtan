@@ -8,7 +8,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-04-26_572037_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-20_608105_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -24,7 +24,6 @@ def preprocessing_alert_folders(topic_path):
     print(f'Alerts dataframe columns: {df_alerts.columns}')
     print(f'No. of alerts (before preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (before preprocessing) = {len(df_alerts["objectId"].unique())}')
-
 
     DIRS = f'{topic_path}/*'
 
@@ -62,7 +61,6 @@ def preprocessing_alert_folders(topic_path):
             print(f'Folder {dir} not in the alerts, skipping...')
     print('Done!')
 
-
     df_alerts_shape = df_alerts.shape
 
     ######################################## THESE ARE THE OLD CONDITIONS ########################################
@@ -77,10 +75,13 @@ def preprocessing_alert_folders(topic_path):
     #)
     #############################################################################################################
 
-    # NOTE: Below line temporarily added to generate dataset with only SN examples. Remove after experiment done.
-    # 1. For SN dataset
+    # NOTE: Below line temporarily adds further selections to only select a subset of data. Remove/comment after experiment done.
+    # 1. For SN dataset (assuming polling is done for all TNS SN classes and finkclass Early SN Ia candidate.
     #df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate')]
-    df_alerts = df_alerts[df_alerts['finkclass'] == 'custom_agn']
+    # 2. For AGN dataset (assuming polling is done for all classes in agn_list, whether TNS or SIMBAD, whatever classes are available in the data transfer service online.
+    #df_alerts = df_alerts[df_alerts['finkclass'] == 'custom_agn']
+    # 3. For SN + AGN dataset
+    df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate') | (df_alerts['finkclass'] == 'custom_agn')]
 
     # Select those having >=10 points in the light curve and at least 4 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
@@ -121,7 +122,7 @@ torch.save(data_obj["test_data_combined"], 'test_data_combined.pth')
 np.save('total_objIds.npy', data_obj["total_objIds"])
 np.save('train_objIds.npy', data_obj["train_objIds"])
 np.save('val_objIds.npy', data_obj["val_objIds"])
-#np.save('test_objIds.npy', data_obj["test_objIds"])
+np.save('test_objIds.npy', data_obj["test_objIds"])
 #np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
 np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
 np.save('duration_lcs.npy', data_obj["duration_lcs"])

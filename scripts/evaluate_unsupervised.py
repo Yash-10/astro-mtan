@@ -22,10 +22,10 @@ embed_time = 128
 dim = 2
 seed = 42
 store_decoded_lcs = True
-# NOTE: Change the below two lines based on which dataset to evaluate the model on.
-DATA_COMBINED_PATH = 'train_data_combined.pth'
-DATA_IDS_PATH = 'train_objIds.npy'
-model_file_path = 'ftransfer_ztf_2024-04-26_572037_copy_mtan_rnn_mtan_rnn_.h5'
+# NOTE, TODO: Change the below two lines based on which dataset to evaluate the model on.
+DATA_COMBINED_PATH = 'test_data_combined.pth'
+DATA_IDS_PATH = 'test_objIds.npy'
+model_file_path = 'ftransfer_ztf_2024-05-20_608105_copy_mtan_rnn_mtan_rnn_.h5'
 
 
 # Set seed during testing as well since this script samples random values for the variable, epsilon.
@@ -40,7 +40,7 @@ data_Ids = np.load(DATA_IDS_PATH)
 dataset = MyDataSet(data_combined, data_Ids)
 test_loader = DataLoader(dataset, batch_size=1, num_workers=2, shuffle=False)
 
-#test_loader = torch.load('test_dataloader.pth') # NOTE: This script is only tested for dataloaders with batch size=1; for greater batch sizes, some bugs may be introduced. TODO: Fix this so can I also use train dataloader when needed to get results on the train set, for example.
+#test_loader = torch.load('test_dataloader.pth') # NOTE: This script is only tested for dataloaders with batch size=1; for greater batch sizes, some bugs may be introduced.
 #total_objIds = np.load('total_objIds.npy')
 #total_objIds_encoded = np.load('total_objIds_encoded.npy')
 
@@ -114,10 +114,11 @@ with torch.no_grad():
             mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
             test_n += batch
 
-            print(pred_x.shape, time_steps.shape, time_steps.unsqueeze(2).shape)
+            #print(pred_x.shape, time_steps.shape, time_steps.unsqueeze(2).shape)
+            print(pred_x.shape, observed_data.shape, observed_mask.shape)
             decoded_lcs.append(
                 np.vstack(
-                    (pred_x.cpu().detach().numpy(), observed_data.cpu().detach().numpy(), observed_mask.cpu().detach().numpy())  # TODO: Also save time_steps: time_steps.unsqueeze(2).cpu().detach().numpy()
+                    (pred_x.cpu().detach().numpy(), observed_data.cpu().detach().numpy(), observed_mask.cpu().detach().numpy(), np.repeat(time_steps.unsqueeze(2).cpu().detach().numpy(), 2, pred_x.shape[-1]))
                 )
             )
 
