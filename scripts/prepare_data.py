@@ -167,6 +167,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
+        # NOTE: It's important to note that here, min_time and max_time are calculated on the entire dataset (train+val+test) and not only using the train set.
+        # In mTAN physionet data preprocessing, observed values are normalized using min/max from the entire dataset but times are normalized using the max value from its own dataset (train, val OR, test) separately.
         lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=True, local_time_normalization=False, max_time=max_time, min_time=min_time, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId

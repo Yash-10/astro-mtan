@@ -46,9 +46,9 @@ def preprocessing_alert_folders(topic_path):
             shutil.move(raw_dir, STARS_DIR)
             df_alerts.finkclass.replace(dir, 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir == 'SN' or dir == 'SN%20candidate':  # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
+        elif dir == 'SN' or dir == 'SN%20candidate':
+            # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
             # Also NOTE: "(TNS) SN ..." may also be present in other folders like AGN, but those will not be given the `custom_sn` label. This is irrelevant for the unsupervised learning, but may become important for supervised classifications.
-        #elif dir in sn_list:
             #if df_alerts.tnsclass.isin(sn_list):  # TODO: Not sure if this condition is needed. Sometimes the tnsclass in these cases may contain "Unknown" as well, so this condition removes those cases. But if it's needed or not is not entirely clear.
             shutil.move(raw_dir, SN_DIR)
             df_alerts.finkclass.replace(dir, 'custom_sn', inplace=True)
@@ -100,8 +100,11 @@ def preprocessing_alert_folders(topic_path):
     #df_alerts = pd.concat([df_alerts, tns_processed_alerts], ignore_index=True)
     ##################################################################################
 
-    # Some examples are manually removed. See constants.py for details.
+    # APPLY FURTHER SELECTION CRITERIA
+    # 1. Some examples are manually removed. See constants.py for details. These are parallel-lc-same-band examples.
     df_alerts = df_alerts[~df_alerts['objectId'].isin(to_remove_objIds)]
+    # 2. Remove ZTF18.. object IDs with one of the TNS SN classification.
+    df_alerts = df_alerts[(df_alerts['objectId'].str.contains('ZTF18')) & (df_alerts['tnsclass'].isin(sn_list))]
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
