@@ -10,3 +10,5 @@ python3 tan_unsupervised.py --niters 200 --lr 0.001 --rec-hidden 64 --latent-dim
 ```
 
 `visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset.ipynb` is the same as above, except I use the test to evaluate the performance. This is necessary because, ultimately, we want to evaluate performance on data unseen during training. Evaluating on train set was only as a validation check to ensure the model can learn interpolations on the train set (i.e., data on which it was trained).
+
+`visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset_onlySNvisualize.ipynb` is same as `visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset.ipynb`, but only custom_sn examples are shown purposefully. This was done because AGN dominated the SN+AGN data, and the interpolations were good on AGN. We wanted to see if interpolations are also good for SN when training on SN+AGN combined. The previous notebooks described above didn't have much (or even any) visualization for custom_sn decoded lcs.
