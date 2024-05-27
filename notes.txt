@@ -1,0 +1,44 @@
+- VAEs output vector of means and vector of standrd deviations instead of a single vector containing some real values, due to the reparameterization trick.
+
+If while polling the alerts fink_client_register and related command are not working, use this and try again:
+```
+export PATH=$PATH:/home/ygondhal/.local/bin
+```
+
+Conditions used while alert polling (data range: Jan 1, 2020 to Jan 1, 2021):
+```
+candidate.nbad = 0;
+candidate.fwhm <= 5;
+candidate.elong <= 1.2;
+ABS(candidate.magdiff) <= 0.1;
+candidate.drb > 0.8 AND candidate.rb > 0.8;
+candidate.ndethist > 2 AND candidate.ndethist < 80;
+candidate.isdiffpos = "t";
+NOT(candidate.ssdistnr < 10 AND candidate.ssdistnr > 0);  # crit_nomoving
+NOT(candidate.sgscore1 > 0.5 AND candidate.distpsnr1 < 1.5 AND candidate.distpsnr1 >= 0);  # crit_nostellar
+candidate.jd - candidate.jdstarthist > 30/60/24;  # crit_mingap
+```
+
+=====================
+For the SN experiment, the below is used:
+
+```
+candidate.rb >= 0.65;
+candidate.nbad = 0;
+candidate.fwhm <= 5;
+candidate.elong <= 1.2;
+abs(candidate.magdiff) <= 0.1;
+```
+
+For the SN+AGN experiment, below is used:
+All TNS SN + Fink Early SN Ia + all AGN from the list in constants.py. For AGN, both TNS and SIMBAD are used whenever available.
+
+the above five conditions.
+Data range: June 1, 2021 - Dec 31, 2022.
+
+
+
+MISCELLANEOUS
+1. HOW TO RUN JUPYTER NOTEBOOK ON SUPERCOMPUTER: I used instructions here: https://github.com/kakirastern/cookies-n-code/blob/master/code-review_archive/2017--2018/2018_08_03/README.rst. Can also see https://bgoncharov.com/ozstar-setup/
+
+2. At some point, I was unable to download the alerts on the OzStar supercomputer, but able on Google Colab. It said "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty." To resolve this issue, I increased max_timeout value from 10 to 30 and it worked.
