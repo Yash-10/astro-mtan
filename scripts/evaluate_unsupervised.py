@@ -25,7 +25,7 @@ store_decoded_lcs = True
 # NOTE, TODO: Change the below two lines based on which dataset to evaluate the model on.
 DATA_COMBINED_PATH = 'test_data_combined.pth'
 DATA_IDS_PATH = 'test_objIds.npy'
-model_file_path = 'ftransfer_ztf_2024-05-20_608105_copy_mtan_rnn_mtan_rnn_.h5'
+model_file_path = 'ftransfer_ztf_2024-05-26_598303_copy_mtan_rnn_mtan_rnn_.h5'
 
 
 # Set seed during testing as well since this script samples random values for the variable, epsilon.

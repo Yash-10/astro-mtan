@@ -4,11 +4,12 @@ import shutil
 import numpy as np
 import pandas as pd
 import torch
+from urllib.parse import unquote
 from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-20_608105_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-26_598303_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -27,38 +28,50 @@ def preprocessing_alert_folders(topic_path):
 
     DIRS = f'{topic_path}/*'
 
-    AGN_DIR = os.path.join(f'{topic_path}', 'custom_agn')
-    STARS_DIR = os.path.join(f'{topic_path}', 'custom_stars')
-    SN_DIR = os.path.join(f'{topic_path}', 'custom_sn')
-    SIMBAD_GALAXIES_DIR = os.path.join(f'{topic_path}', 'custom_simbad_galaxies')
-    os.makedirs(AGN_DIR, exist_ok=True)
-    os.makedirs(STARS_DIR, exist_ok=True)
-    os.makedirs(SIMBAD_GALAXIES_DIR, exist_ok=True)
+    #AGN_DIR = os.path.join(f'{topic_path}', 'custom_agn')
+    #STARS_DIR = os.path.join(f'{topic_path}', 'custom_stars')
+    #SN_DIR = os.path.join(f'{topic_path}', 'custom_sn')
+    #SIMBAD_GALAXIES_DIR = os.path.join(f'{topic_path}', 'custom_simbad_galaxies')
+    #os.makedirs(AGN_DIR, exist_ok=True)
+    #os.makedirs(STARS_DIR, exist_ok=True)
+    #os.makedirs(SIMBAD_GALAXIES_DIR, exist_ok=True)
 
     print('Starting arranding subfolders...')
+    # NOTE: The finkclass column in the alerts at the end of the function come from the folder itself. If you read alerts of a specific folder, you will see there is no finkclass column.
     for raw_dir in glob.glob(DIRS):
-        dir = raw_dir.split('/')[-1].split('finkclass=')[-1]
-        if dir in agn_list:
-            shutil.move(raw_dir, AGN_DIR)
-            df_alerts.finkclass.replace(dir, 'custom_agn', inplace=True)
+        dir_ = raw_dir.split('/')[-1].split('finkclass=')[-1]
+        if dir_ in agn_list:
+            #shutil.move(raw_dir, AGN_DIR)  # NOTE: Now alerts are not transferred to a separate directory since that is less flexible when we want to assign custom_.. class not based on finkclass, e.g., tnsclass. Moving folders directly in this case is not possible.
+            df_alerts.finkclass.replace(unquote(dir_), 'custom_agn', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir in stars_list:
-            shutil.move(raw_dir, STARS_DIR)
-            df_alerts.finkclass.replace(dir, 'custom_stars', inplace=True)
+        elif dir_ in stars_list:
+            #shutil.move(raw_dir, STARS_DIR)
+            df_alerts.finkclass.replace(unquote(dir_), 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir == 'SN' or dir == 'SN%20candidate':
+        elif dir_ == 'SN' or dir_ == 'SN%20candidate':
             # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
             # Also NOTE: "(TNS) SN ..." may also be present in other folders like AGN, but those will not be given the `custom_sn` label. This is irrelevant for the unsupervised learning, but may become important for supervised classifications.
             #if df_alerts.tnsclass.isin(sn_list):  # TODO: Not sure if this condition is needed. Sometimes the tnsclass in these cases may contain "Unknown" as well, so this condition removes those cases. But if it's needed or not is not entirely clear.
+            """
             shutil.move(raw_dir, SN_DIR)
-            df_alerts.finkclass.replace(dir, 'custom_sn', inplace=True)
+            df_alerts.finkclass.replace(unquote(dir_), 'custom_sn', inplace=True)
+            """
+            pass
             # shutil.rmtree(raw_dir)
         #elif dir in simbad_galaxies_list:
         #    shutil.move(raw_dir, SIMBAD_GALAXIES_DIR)
         #    df_alerts.finkclass.replace(dir, 'custom_simbad_galaxies', inplace=True)
             # shutil.rmtree(raw_dir)
         else:
-            print(f'Folder {dir} not in the alerts, skipping...')
+            print(f'Folder {dir_} not in the alerts, skipping...')
+
+    # TODO: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
+    def f(row):
+        return 'custom_sn' if row['tnsclass'] in sn_list else row['finkclass']
+     
+    df_alerts['finkclass'] = df_alerts.apply(lambda row: f(row), axis = 1)
+    #df_alerts.loc[df_alerts.tnsclass.isin(sn_list), 'finkclass'] = 'custom_sn'
+
     print('Done!')
 
     df_alerts_shape = df_alerts.shape
@@ -129,6 +142,7 @@ np.save('test_objIds.npy', data_obj["test_objIds"])
 #np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
 np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
 np.save('duration_lcs.npy', data_obj["duration_lcs"])
+np.save("num_datapoints_lcs.npy", data_obj["seq_len_all"])
 np.save('min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
 
 """

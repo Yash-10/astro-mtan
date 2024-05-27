@@ -322,8 +322,12 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
 
     if torch.max(enc_combined_tt) != 0.:
         # The below assertion is valid only if normalize_times=True in get_lc inside prepare_data since the time values will already be normalized to [0, 1].
-        assert torch.max(enc_combined_tt) == 1.0
-        enc_combined_tt = enc_combined_tt / torch.max(enc_combined_tt)
+        #assert torch.max(enc_combined_tt) == 1.0
+        # The below assertion is valid only if make_first_time_zero=True in get_lc inside prepare_data since only then the first time value will be zero.
+        assert torch.min(enc_combined_tt) == 0.0
+        enc_combined_tt = (enc_combined_tt - torch.min(enc_combined_tt)) / (torch.max(enc_combined_tt) - torch.min(enc_combined_tt))
+        assert torch.all((enc_combined_tt >= 0) & (enc_combined_tt <= 1))
+        #enc_combined_tt = enc_combined_tt / torch.max(enc_combined_tt)
 
     combined_data = torch.cat(
         (enc_combined_vals, enc_combined_mask, enc_combined_tt.unsqueeze(-1)), 2)

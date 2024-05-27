@@ -167,9 +167,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     total_data, total_objId, total_common_finkclasses = [], [], []
     for objId in df_alerts['objectId'].unique():
-        # NOTE: It's important to note that here, min_time and max_time are calculated on the entire dataset (train+val+test) and not only using the train set.
-        # In mTAN physionet data preprocessing, observed values are normalized using min/max from the entire dataset but times are normalized using the max value from its own dataset (train, val OR, test) separately.
-        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=True, local_time_normalization=False, max_time=max_time, min_time=min_time, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        # NOTE: It's important to note that here we use normalize_times=False since we want min_time and max_time calculated on the specific dataset (train, val, OR test), just as done in mTAN phyionet data preprocessing. This normalization is done in variable_time_collate_fn.
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, local_time_normalization=False, max_time=max_time, min_time=min_time, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         total_data.append(lc_data)
         assert lc_data[0] == objId
         total_objId.append(objId)
@@ -210,8 +209,19 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         if i == 5:
             break
         print(td[1][-1])
+ 
+    # Find the min and max times for train, val, and test sets.
+    train_min_time = np.min([td[1].min() for td in train_data])
+    train_max_time = np.max([td[1].max() for td in train_data])
+    val_min_time = np.min([td[1].min() for td in val_data])
+    val_max_time = np.max([td[1].max() for td in val_data])
+    test_min_time = np.min([td[1].min() for td in test_data])
+    test_max_time = np.max([td[1].max() for td in test_data])
 
-    # Note: As per the mTAN code, we are using the same data_min and data_max across train, val, and test sets: these min/max vals are calculated using all three combined above.
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the train dataset: {train_max_time}, {train_min_time}')
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the val dataset: {val_max_time}, {val_min_time}')
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the test dataset: {test_max_time}, {test_min_time}')
+
     train_data_combined, train_data_Ids = variable_time_collate_fn(train_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
     val_data_combined, val_data_Ids = variable_time_collate_fn(val_data, device, classify=classify, activity=activity,
@@ -273,6 +283,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     data_obj = {
         #"final_data": np.array(total_data),  # This may give error since total_data is a list containing variable length entries.
         "duration_lcs": np.array(duration_lcs),
+        "seq_len_all": np.array(seq_len_all),
         "min_max_magdiffs": np.array(min_max_magdiffs),
         "total_objIds": np.array(total_objId),
         "train_objIds": train_data_objId,
