@@ -23,3 +23,7 @@ Max and Min time values (in hrs) across the test dataset: 8615.560000799596, 0.0
 ```
 
 so for all three types of data, the max time is very similar, and the min time is the same. This may be the reason why the performance didn't change much, even if time normalization is done for each separately. For different datasets, this observation of performance not changing as time normalization is changed like this may not hold.
+
+- `visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset_latest.ipynb` is the latest notebook. The following changes are made compared to the latest notebook before this:
+    - The data is more reliable: ZTF18... object IDs with one of the TNS SN classes are removed. To minimize the chances of removing many such transient light curves, a relatively more recent data range (June 1, 2021, to June 1, 2022) is selected. Overall, 5604 lcs for train, 1402 for val, and 1752 for test are present.
+    - The notebook itself is updated considerably, with more extensive analysis. Some additions include refinement of the definition of the class lists for SN and AGN (reflecting the changes made in the scripts), `faiss` to perform query by example (similarity search) over the encoded representations, more investigation of the extreme data points in the two-dimensional projection plots of the encoded representations, etc.
