@@ -23,10 +23,11 @@ dim = 2
 seed = 42
 store_decoded_lcs = True
 # NOTE, TODO: Change the below two lines based on which dataset to evaluate the model on.
-DATA_COMBINED_PATH = 'test_data_combined.pth'
-DATA_IDS_PATH = 'test_objIds.npy'
-model_file_path = 'ftransfer_ztf_2024-05-26_598303_copy_mtan_rnn_mtan_rnn_.h5'
-
+DATA_COMBINED_PATH = 'train_data_combined.pth'
+DATA_IDS_PATH = 'train_objIds.npy'
+SETTING = DATA_COMBINED_PATH.split('_')[0]  # 'test', 'train', or 'val'
+assert SETTING == DATA_IDS_PATH.split('_')[0]
+model_file_path = 'ftransfer_ztf_2024-05-27_433174_copy_mtan_rnn_mtan_rnn_.h5'
 
 # Set seed during testing as well since this script samples random values for the variable, epsilon.
 torch.manual_seed(seed)
@@ -130,10 +131,10 @@ objIds = list(chain.from_iterable(objIds))
 
 print(f'MSE = {mse/test_n}')
 
-np.save('evaluate_outputs_condensed.npy', outputs_condensed)
-np.save('evaluate_objIds_dataloader.npy', objIds)
+np.save(f'evaluate_{SETTING}_outputs_condensed.npy', outputs_condensed)
+np.save(f'evaluate_{SETTING}_objIds_dataloader.npy', objIds)
 
 assert np.all(objIds == data_Ids)
 
 if store_decoded_lcs:
-    np.savez('evaluate_decoded_lcs.npz', *decoded_lcs)
+    np.savez(f'evaluate_{SETTING}_decoded_lcs.npz', *decoded_lcs)

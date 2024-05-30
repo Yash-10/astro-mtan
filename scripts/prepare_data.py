@@ -66,6 +66,7 @@ def get_tns_tde_alerts():
     return alerts
 
 def add_tns_tde():  # TODO: Generalize this function to allow any object, not just TDEs. This will help in curating a confident, labelled dataset.
+    """THIS IS A OLD FUNCTION. Use get_tns_tde_alerts instead."""
     tns_tde_objIds = ['ZTF24aaahxwr', 'ZTF24aaecooj', 'ZTF20aahmtso', 'ZTF22aafujzv', 'ZTF22aadesap', 'ZTF18aabdajx', 'ZTF21aanxhjv', 'ZTF22abegjtx']
     flags = [1, 1, 0, 0, 0, 0, 0, 0]  # 1 means use entire light curve since it contains few points already. 0 means need to manually select a subset.
     subset_indices = [(None, None), (None, None), (1,35), (0,25), (0,20), (0,9), (0,15), (0,21)]  # indices are 0:len(pdf), 0:len(pdf), 1:35, 0:25, etc.
@@ -149,7 +150,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
 
     # Since we aim to do global time normalization, we first need to find the max and min times (the absolute values and not the no. of datapoints) across the entire dataset.
     # FIRST, we do the loop only to find the min/max times across the dataset. Then the second loop performs the global time normalization using the max time found in the first loop.
-    min_time, max_time, duration_lcs, min_max_magdiffs = np.Inf, -np.Inf, [], []
+    # min_max_mags to store the min/max mag so that these values can be used to unnormalize the light curves later. This is because mag normalization is locally done for each lc. We don't need to save the min/max values for the time (x-axis) since time is normalized globally, so a singel value across the dataset suffices.
+    min_time, max_time, duration_lcs, min_max_magdiffs, min_max_mags = np.Inf, -np.Inf, [], [], []
     for objId in df_alerts['objectId'].unique():
         lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, max_time=None, min_time=None, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         assert lc_data[0] == objId
@@ -161,6 +163,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         duration_lcs.append(float(lc_data[1][-1] - lc_data[1][0]))
         _lc_data_obs = lc_data[2]
         min_max_magdiffs.append(_lc_data_obs.max() - _lc_data_obs[_lc_data_obs != 0.0].min())  # Ignoring zero values for min because zero values mean unobserved.
+        min_max_mags.append((objId, _lc_data_obs[_lc_data_obs != 0.0].min().item(), _lc_data_obs.max().item()))
    
     #assert min_time = 0.0   # Because first time is always zero for all lcs because we use make_first_time_zero=True.
     print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the dataset: {max_time}, {min_time}')
@@ -284,6 +287,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         #"final_data": np.array(total_data),  # This may give error since total_data is a list containing variable length entries.
         "duration_lcs": np.array(duration_lcs),
         "seq_len_all": np.array(seq_len_all),
+        "min_max_mags": np.array(min_max_mags),
         "min_max_magdiffs": np.array(min_max_magdiffs),
         "total_objIds": np.array(total_objId),
         "train_objIds": train_data_objId,

@@ -109,6 +109,16 @@ def normalize_time_values(times, local_time_normalization=False, max_time=None, 
     #normalized_times *= 48  # Doing this is not needed since anyways variable_time_collate_fn will normalize to the [0, 1] range.
     return normalized_times
 
+def unnormalize_time(normalized_times, min_time, max_time):
+    return normalized_times * (max_time - min_time) + min_time
+
+def unnormalize_mag(normalized_mags, min_mag, max_mag):
+    # Normalized mags will have zero values set during normalization.
+    # We want to exclude those entries.
+    condition = (normalized_mags == 0.0)
+    umag = np.where(condition, normalized_mags, normalized_mags * max_mag + min_mag)
+    return umag
+
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name)."""
     # Accumulate all alerts for the provided objectId

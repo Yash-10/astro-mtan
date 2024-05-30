@@ -9,7 +9,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-26_598303_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-27_433174_copy'
 
 
 def preprocessing_alert_folders(topic_path):
@@ -65,7 +65,7 @@ def preprocessing_alert_folders(topic_path):
         else:
             print(f'Folder {dir_} not in the alerts, skipping...')
 
-    # TODO: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
+    # NOTE: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
     def f(row):
         return 'custom_sn' if row['tnsclass'] in sn_list else row['finkclass']
      
@@ -117,7 +117,7 @@ def preprocessing_alert_folders(topic_path):
     # 1. Some examples are manually removed. See constants.py for details. These are parallel-lc-same-band examples.
     df_alerts = df_alerts[~df_alerts['objectId'].isin(to_remove_objIds)]
     # 2. Remove ZTF18.. object IDs with one of the TNS SN classification.
-    df_alerts = df_alerts[(df_alerts['objectId'].str.contains('ZTF18')) & (df_alerts['tnsclass'].isin(sn_list))]
+    df_alerts = df_alerts[~((df_alerts['objectId'].str.contains('ZTF18')) & (df_alerts['tnsclass'].isin(sn_list)))]
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
@@ -144,6 +144,7 @@ np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
 np.save('duration_lcs.npy', data_obj["duration_lcs"])
 np.save("num_datapoints_lcs.npy", data_obj["seq_len_all"])
 np.save('min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
+np.save('min_max_mags.npy', data_obj['min_max_mags'])
 
 """
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.
