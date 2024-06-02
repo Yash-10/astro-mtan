@@ -72,6 +72,9 @@ def preprocessing_alert_folders(topic_path):
     df_alerts['finkclass'] = df_alerts.apply(lambda row: f(row), axis = 1)
     #df_alerts.loc[df_alerts.tnsclass.isin(sn_list), 'finkclass'] = 'custom_sn'
 
+    print('finkclass value_counts after first processing...')
+    print(df_alerts['finkclass'].value_counts())
+
     print('Done!')
 
     df_alerts_shape = df_alerts.shape
@@ -121,6 +124,10 @@ def preprocessing_alert_folders(topic_path):
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
     print(f'No. of transients (after preprocessing) = {len(df_alerts["objectId"].unique())}')
+
+    print('finkclass and tnsclass value_counts [FINAL]...')
+    print(df_alerts['finkclass'].value_counts())
+    print(df_alerts['tnsclass'].value_counts())
 
     return df_alerts
 
