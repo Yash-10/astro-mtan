@@ -27,13 +27,16 @@ so for all three types of data, the max time is very similar, and the min time i
 ---
 
 - `visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset_latest.ipynb` is the latest notebook. The following changes are made compared to the latest notebook before this:
-    - The data is more reliable: ZTF18... object IDs with one of the TNS SN classes are removed. To minimize the chances of removing many such transient light curves, a relatively more recent data range (June 1, 2021, to June 1, 2022) is selected. Overall, 5604 lcs for train, 1402 for val, and 1752 for test are present.
+    - The data is more reliable: ZTF18... object IDs with one of the TNS SN classes are removed. A relatively more recent data range (June 1, 2021, to June 1, 2022) is selected to minimize the chances of removing many such transient light curves. Overall, 5604 lcs for train, 1402 for val, and 1752 for test are present.
     - The notebook itself is updated considerably, with more extensive analysis. Some additions include refinement of the definition of the class lists for SN and AGN (reflecting the changes made in the scripts), `faiss` to perform query by example (similarity search) over the encoded representations, more investigation of the extreme data points in the two-dimensional projection plots of the encoded representations, etc.
 For this, the details are below:
 ```
 ftransfer_ztf_2024-05-27_433174_copy
 
 Max and Min time values (in hrs) across the train dataset: 8763.185277599841, 0.0
+
+For this case, AGN interpolation examples can be found [here](https://github.com/Yash-10/fast_transients/blob/dbc76117880c9634e068c171e1381f025845f8f6/tnsSN_earlySNIacand_%26_custom_agn/visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset_latest.ipynb), whereas SN interpolations [here](https://github.com/Yash-10/fast_transients/blob/main/tnsSN_earlySNIacand_%26_custom_agn/visualization_outputs_w_periodic_time_embedding_ldim2_timeHrs_testset_latest.ipynb). The former notebook is slightly different than the latter (the latter is the latest), but both use the same data and the same trained model, just that former shows AGN decoded light curves and the latter shows SN decoded light curves + small improvements or bug fixing in the code, which shouldn't drastically affect the interpretation of the results.
+
 Max and Min time values (in hrs) across the val dataset: 8762.649167999625, 0.0
 Max and Min time values (in hrs) across the test dataset: 8763.17888879031, 0.0
 ```
