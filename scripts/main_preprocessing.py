@@ -11,6 +11,32 @@ from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
 TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-27_433174_copy'
 
+"""
+def f_custom_sn(row):
+    rf = row['finkclass']
+    if isinstance(rf, list):
+        if row['tnsclass'] in sn_list and 'custom_sn' not in rf:
+            rf.append('custom_sn')
+    elif isinstance(rf, str):
+        if rf not in ... TODO: Incomplete
+        if row['tnsclass'] in sn_list:
+            rf ='custom_sn'
+
+    return rf
+
+def f_custom_agn(row, dir_=None):
+    if dir is None:
+        raise ValueError("`dir_` must be specified in f_custom_agn.")
+    rf = row['finkclass']
+    if isinstance(rf, list):
+        if 'custom_agn' not in rf:
+            rf.append('custom_agn')
+    elif isinstance(rf, str):
+        if rf == unquote(dir_):
+            rf = 'custom_agn'
+
+    return rf
+"""
 
 def preprocessing_alert_folders(topic_path):
     """Preprocessing for arranging subfolders (denoting the fink class) after the
@@ -78,6 +104,18 @@ def preprocessing_alert_folders(topic_path):
     print('Done!')
 
     df_alerts_shape = df_alerts.shape
+
+    ##############################################################################################################
+    # NOTE: Note that the modified finkclass column will have only one value. In reality, an alert might be both
+    # custom_sn and custom_agn, for example. This indeed happens, at least for ftransfer_ztf_2024-05-27_433174.
+    # The idea is that we don't incorporate all such finkclasses (since it complicates the code and is a bit non-trivial to test it).
+    # Instead, one should use the below condition (assuming we want to see overlap between custom_sn and custom_agn)
+    # to get the alert rows and hence the objectIds that can be later investigated in downstream applications.
+
+    # df_subset = df[(df['finkclass'].isin(agn_list)) & (df['tnsclass'].isin(sn_list))]
+
+    # For ftransfer_ztf_2024-05-27_433174, this gives 673 alerts and 26 corresponding light curves.
+    ##############################################################################################################
 
     ######################################## THESE ARE THE OLD CONDITIONS ########################################
     # After renaming the columns, preprocess the alerts based on some criteria

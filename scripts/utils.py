@@ -112,11 +112,10 @@ def normalize_time_values(times, local_time_normalization=False, max_time=None, 
 def unnormalize_time(normalized_times, min_time, max_time):
     return normalized_times * (max_time - min_time) + min_time
 
-def unnormalize_mag(normalized_mags, min_mag, max_mag):
-    # Normalized mags will have zero values set during normalization.
-    # We want to exclude those entries.
-    condition = (normalized_mags == 0.0)
-    umag = np.where(condition, normalized_mags, normalized_mags * max_mag + min_mag)
+def unnormalize_mag(normalized_mags, mask, min_mag, max_mag):
+    # We want to exclude values that are masked while unnormalizing. These are given by mask == 0.0.
+    condition = (mask == 0.0)
+    umag = np.where(condition, np.nan, normalized_mags * max_mag + min_mag)
     return umag
 
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
