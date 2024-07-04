@@ -53,7 +53,7 @@ class multiTimeAttention(nn.Module):
         return torch.sum(p_attn*value.unsqueeze(-3), -2), p_attn
     
     
-    def forward(self, query, key, value, mask=None, dropout=None):
+    def forward(self, query, key, value, mask=None, dropout=None, return_att=False):
         "Compute 'Scaled Dot Product Attention'"
         batch, seq_len, dim = value.size()
         if mask is not None:
@@ -62,11 +62,13 @@ class multiTimeAttention(nn.Module):
         value = value.unsqueeze(1)
         query, key = [l(x).view(x.size(0), -1, self.h, self.embed_time_k).transpose(1, 2)
                       for l, x in zip(self.linears, (query, key))]
-        x, _ = self.attention(query, key, value, mask, dropout)
+        x, attn = self.attention(query, key, value, mask, dropout)
         x = x.transpose(1, 2).contiguous() \
              .view(batch, -1, self.h * dim)
-        return self.linears[-1](x)
-    
+        if return_att:
+            return self.linears[-1](x), attn
+        else:
+            return self.linears[-1](x)
     
 class enc_mtan_rnn(nn.Module):
     def __init__(self, input_dim, query, latent_dim=2, nhidden=16, 
@@ -108,7 +110,7 @@ class enc_mtan_rnn(nn.Module):
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
        
-    def forward(self, x, time_steps):
+    def forward(self, x, time_steps, return_att=False):
         time_steps = time_steps.cpu().to(torch.float32)
         mask = x[:, :, self.dim:]
         mask = torch.cat((mask, mask), 2)
@@ -118,7 +120,9 @@ class enc_mtan_rnn(nn.Module):
         else:
             key = self.fixed_time_embedding(time_steps).to(self.device)
             query = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, x.float(), mask.float())
+        out = self.att(query, key, x.float(), mask.float(), return_att=return_att)
+        if return_att:
+            out = out[0]
         out, _ = self.gru_rnn(out)
         out = self.hiddens_to_z0(out)
         return out
