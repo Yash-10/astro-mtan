@@ -44,7 +44,7 @@ parser.add_argument('--enc-rnn', action='store_false')
 parser.add_argument('--dec-rnn', action='store_false')
 parser.add_argument('--sample-tp', type=float, default=1.0)
 #parser.add_argument('--only-periodic', type=str, default=None)
-parser.add_argument('--dropout', type=float, default=0.0)  # TODO: Add dropout later.
+parser.add_argument('--dropout', type=float, default=0.0)
 parser.add_argument('--topic', type=str, help='Name of the topic of the data transfer that contains the alerts.')
 parser.add_argument('--dim', type=int, help='dim value')
 parser.add_argument('--use_wandb', action='store_true', help='whether to use wandb')
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     elif args.enc == 'mtan_rnn':
         rec = models.enc_mtan_rnn(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.rec_hidden, 
-            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device, dropout=args.dropout).to(device)
 
     if args.dec == 'rnn3':
         dec = models.dec_rnn3(
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     elif args.dec == 'mtan_rnn':
         dec = models.dec_mtan_rnn(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.gen_hidden, 
-            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device, dropout=args.dropout).to(device)
 
     if args.use_wandb:  # TODO: See if wandb is working as expected and is logging what we want.
         import wandb

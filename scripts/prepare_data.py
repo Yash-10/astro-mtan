@@ -232,6 +232,9 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     test_data_combined, test_data_Ids = variable_time_collate_fn(test_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max)
 
+    print('yes')
+    print(train_data_combined[3])
+
     assert np.all(train_data_objId == train_data_Ids)
     assert np.all(test_data_objId == test_data_Ids)
     assert np.all(val_data_objId == val_data_Ids)

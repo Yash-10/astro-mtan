@@ -13,7 +13,7 @@ import time
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cpu')  # Force to use CPU for evaluation since that closely mimics how the model will be used in real applications.
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
-num_ref_points = 160
+num_ref_points = 512
 latent_dim = 2
 learn_emb = True
 rec_hidden = 64
@@ -27,7 +27,7 @@ dim = 2
 seed = 42
 store_decoded_lcs = True
 # NOTE: Change the `SETTING` based on which dataset to evaluate the model on.
-SETTING = 'train'   # 'test', 'train', or 'val'
+SETTING = 'test'   # 'test', 'train', or 'val'
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
 assert SETTING == DATA_IDS_PATH.split('_')[0]

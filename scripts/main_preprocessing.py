@@ -9,7 +9,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-27_433174_copy'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-27_433174'
 
 """
 def f_custom_sn(row):

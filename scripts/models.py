@@ -49,7 +49,8 @@ class multiTimeAttention(nn.Module):
             scores = scores.masked_fill(mask.unsqueeze(-3) == 0, -1e9)
         p_attn = F.softmax(scores, dim = -2)
         if dropout is not None:
-            p_attn = dropout(p_attn)
+            #p_attn = dropout(p_attn)
+            p_attn = nn.Dropout(p=0.1)(p_attn)
         return torch.sum(p_attn*value.unsqueeze(-3), -2), p_attn
     
     
@@ -72,7 +73,7 @@ class multiTimeAttention(nn.Module):
     
 class enc_mtan_rnn(nn.Module):
     def __init__(self, input_dim, query, latent_dim=2, nhidden=16, 
-                 embed_time=16, num_heads=1, learn_emb=False, device='cuda'):
+                 embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
         super(enc_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
@@ -80,8 +81,10 @@ class enc_mtan_rnn(nn.Module):
         self.nhidden = nhidden
         self.query = query
         self.learn_emb = learn_emb
+        self.dropout = dropout
         self.att = multiTimeAttention(2*input_dim, nhidden, embed_time, num_heads)
         self.gru_rnn = nn.GRU(nhidden, nhidden, bidirectional=True, batch_first=True)
+        #self.conv = nn.Conv1d(256, nhidden, kernel_size=3)  # ADDED
         self.hiddens_to_z0 = nn.Sequential(
             nn.Linear(2*nhidden, 50),
             nn.ReLU(),
@@ -120,7 +123,7 @@ class enc_mtan_rnn(nn.Module):
         else:
             key = self.fixed_time_embedding(time_steps).to(self.device)
             query = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, x.float(), mask.float(), return_att=return_att)
+        out = self.att(query, key, x.float(), mask.float(), return_att=return_att, dropout=self.dropout)
         if return_att:
             out = out[0]
         out, _ = self.gru_rnn(out)
@@ -131,7 +134,7 @@ class enc_mtan_rnn(nn.Module):
 class dec_mtan_rnn(nn.Module):
  
     def __init__(self, input_dim, query, latent_dim=2, nhidden=16, 
-                 embed_time=16, num_heads=1, learn_emb=False, device='cuda'):
+                 embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
         super(dec_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
@@ -139,8 +142,10 @@ class dec_mtan_rnn(nn.Module):
         self.nhidden = nhidden
         self.query = query
         self.learn_emb = learn_emb
+        self.dropout = dropout
         self.att = multiTimeAttention(2*nhidden, 2*nhidden, embed_time, num_heads)
         self.gru_rnn = nn.GRU(latent_dim, nhidden, bidirectional=True, batch_first=True)    
+        #self.conv = nn.Conv1d(latent_dim, nhidden, kernel_size=3)  # ADDED
         self.z0_to_obs = nn.Sequential(
             nn.Linear(2*nhidden, 50),
             nn.ReLU(),
@@ -178,7 +183,7 @@ class dec_mtan_rnn(nn.Module):
         else:
             query = self.fixed_time_embedding(time_steps).to(self.device)
             key = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, out)
+        out = self.att(query, key, out, dropout=self.dropout)
         out = self.z0_to_obs(out)
         return out        
    
@@ -540,5 +545,5 @@ class dec_rnn3(nn.Module):
             key = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
         out, _ = self.attention(query, key, out)
         out = self.z0_to_obs(out)
-        return out        
+        return out
 
