@@ -11,6 +11,7 @@ import models
 import time
 
 import mtan_utils
+import utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--niters', type=int, default=2000)
@@ -75,7 +76,7 @@ if __name__ == '__main__':
             args.rec_hidden, args.embed_time, learn_emb=args.learn_emb, device=device).to(device)
     elif args.enc == 'mtan_rnn':
         rec = models.enc_mtan_rnn(
-            dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.rec_hidden, 
+            dim, args.latent_dim, args.rec_hidden,   # torch.linspace(0, 1., args.num_ref_points)
             embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device, dropout=args.dropout).to(device)
 
     if args.dec == 'rnn3':
@@ -84,7 +85,7 @@ if __name__ == '__main__':
             args.gen_hidden, args.embed_time, learn_emb=args.learn_emb, device=device).to(device)
     elif args.dec == 'mtan_rnn':
         dec = models.dec_mtan_rnn(
-            dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, args.gen_hidden, 
+            dim, args.latent_dim, args.gen_hidden,   # torch.linspace(0, 1., args.num_ref_points)
             embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device, dropout=args.dropout).to(device)
 
     if args.use_wandb:  # TODO: See if wandb is working as expected and is logging what we want.
@@ -151,7 +152,25 @@ if __name__ == '__main__':
             assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
 
-            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
+            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
+            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            assert subsampled_tp_for_reference[0] == 0.0
+
+            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
+            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            query = query[query <= 1.0]
+
+            #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=args.num_ref_points).to(device)
+            #query = utils.get_reference_times_quantiles(subsampled_tp_for_reference, K=args.num_ref_points).to(device)
+            #print('query')
+            #print(query)
+            #print('subsampled_tp')
+            #print(subsampled_tp)
+            #print('subsampled_tp_for_reference')
+            #print(subsampled_tp_for_reference)
+            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean = out[:, :, :args.latent_dim]
             qz0_logvar = out[:, :, args.latent_dim:]
             # epsilon = torch.randn(qz0_mean.size()).to(device)
@@ -162,7 +181,8 @@ if __name__ == '__main__':
             z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
             pred_x = dec(
                 z0,
-                observed_tp[None, :, :].repeat(args.k_iwae, 1, 1).view(-1, observed_tp.shape[1])
+                observed_tp[None, :, :].repeat(args.k_iwae, 1, 1).view(-1, observed_tp.shape[1]),
+                query
             )
             # nsample, batch, seqlen, dim
             pred_x = pred_x.view(args.k_iwae, batch_len, pred_x.shape[1], pred_x.shape[2])

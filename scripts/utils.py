@@ -115,7 +115,7 @@ def unnormalize_time(normalized_times, min_time, max_time):
 def unnormalize_mag(normalized_mags, mask, min_mag, max_mag):
     # We want to exclude values that are masked while unnormalizing. These are given by mask == 0.0.
     condition = (mask == 0.0)
-    umag = np.where(condition, np.nan, normalized_mags * max_mag + min_mag)
+    umag = np.where(condition, np.nan, normalized_mags * (max_mag - min_mag) + min_mag)
     return umag
 
 def get_lc_old(df_alerts, name, fid_column='fid', magpsf_column='magpsf', jd_column='jd', objectId_column='objectId', sigmapsf_column='sigmapsf', finkclass_column='finkclass'):
@@ -285,3 +285,48 @@ def pad_rows_to_match_columns(array, target_columns):
     padded_array = np.pad(array, ((0, 0), (0, pad_width)), mode='constant', constant_values=0)
 
     return padded_array
+
+
+def get_reference_times_quantiles(t, K):
+    """
+    This function is added by me.
+
+    Return K reference time points based on quantiles.
+
+    Parameters:
+    - t (list): Input time values (List of pytorch tensors with each element of the list being a time value 1D tensor). Assumes time values in each element are sorted.
+    - K (int): Number of reference points to compute.
+
+    Returns:
+    - reference_times (torch.Tensor): 1D tensor of K reference time points.
+    """
+    #t_sorted = torch.sort(t)[0]
+    quantiles = torch.linspace(0, 1, steps=K, device=t[0].device)
+    reference_times = torch.stack([torch.quantile(tt, quantiles) for tt in t])
+    #reference_times = torch.quantile(t, quantiles, dim=1).transpose(0, 1)
+    return reference_times
+
+
+def trim_padded_zeros_tensor(t: torch.Tensor):
+    """
+    This function added by me.
+
+    Trim padded zeros from a 1D PyTorch tensor of time values.
+
+    Parameters:
+    - t (torch.Tensor): 1D tensor of time values with trailing 0.0s.
+
+    Returns:
+    - torch.Tensor: Trimmed tensor excluding trailing padded zeros.
+    """
+    nonzero_indices = torch.nonzero(t != 0.0, as_tuple=False).squeeze()
+    if nonzero_indices.numel() == 0:
+        return t[:1]  # Only padding, return first element
+    last_nonzero = nonzero_indices[-1].item()
+    return t[:last_nonzero + 1]
+
+
+def trim_padded_zeros_tensor_2d(t):
+    """This function added by me."""
+    return [trim_padded_zeros_tensor(time_tensor) for time_tensor in t]
+

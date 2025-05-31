@@ -72,14 +72,14 @@ class multiTimeAttention(nn.Module):
             return self.linears[-1](x)
     
 class enc_mtan_rnn(nn.Module):
-    def __init__(self, input_dim, query, latent_dim=2, nhidden=16, 
+    def __init__(self, input_dim, latent_dim=2, nhidden=16, 
                  embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
         super(enc_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
         self.device = device
         self.nhidden = nhidden
-        self.query = query
+        #self.query = query
         self.learn_emb = learn_emb
         self.dropout = dropout
         self.att = multiTimeAttention(2*input_dim, nhidden, embed_time, num_heads)
@@ -113,16 +113,16 @@ class enc_mtan_rnn(nn.Module):
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
        
-    def forward(self, x, time_steps, return_att=False):
+    def forward(self, x, time_steps, query_times, return_att=False):
         time_steps = time_steps.cpu().to(torch.float32)
         mask = x[:, :, self.dim:]
         mask = torch.cat((mask, mask), 2)
         if self.learn_emb:
             key = self.learn_time_embedding(time_steps).to(self.device)
-            query = self.learn_time_embedding(self.query.unsqueeze(0)).to(self.device)
+            query = self.learn_time_embedding(query_times.unsqueeze(0)).to(self.device)
         else:
             key = self.fixed_time_embedding(time_steps).to(self.device)
-            query = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
+            query = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
         out = self.att(query, key, x.float(), mask.float(), return_att=return_att, dropout=self.dropout)
         if return_att:
             out = out[0]
@@ -133,14 +133,14 @@ class enc_mtan_rnn(nn.Module):
     
 class dec_mtan_rnn(nn.Module):
  
-    def __init__(self, input_dim, query, latent_dim=2, nhidden=16, 
+    def __init__(self, input_dim, latent_dim=2, nhidden=16, 
                  embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
         super(dec_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
         self.device = device
         self.nhidden = nhidden
-        self.query = query
+        #self.query = query
         self.learn_emb = learn_emb
         self.dropout = dropout
         self.att = multiTimeAttention(2*nhidden, 2*nhidden, embed_time, num_heads)
@@ -174,15 +174,15 @@ class dec_mtan_rnn(nn.Module):
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
        
-    def forward(self, z, time_steps):
+    def forward(self, z, time_steps, query_times):
         out, _ = self.gru_rnn(z)
         time_steps = time_steps.cpu()
         if self.learn_emb:
             query = self.learn_time_embedding(time_steps).to(self.device)
-            key = self.learn_time_embedding(self.query.unsqueeze(0)).to(self.device)
+            key = self.learn_time_embedding(query_times.unsqueeze(0)).to(self.device)
         else:
             query = self.fixed_time_embedding(time_steps).to(self.device)
-            key = self.fixed_time_embedding(self.query.unsqueeze(0)).to(self.device)
+            key = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
         out = self.att(query, key, out, dropout=self.dropout)
         out = self.z0_to_obs(out)
         return out        

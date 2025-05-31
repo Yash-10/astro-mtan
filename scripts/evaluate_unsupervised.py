@@ -6,14 +6,16 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 from prepare_data import MyDataSet
+from torch.nn.utils.rnn import pad_sequence
 
 import time
 
+import utils
 
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cpu')  # Force to use CPU for evaluation since that closely mimics how the model will be used in real applications.
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
-num_ref_points = 512
+num_ref_points = 128
 latent_dim = 2
 learn_emb = True
 rec_hidden = 64
@@ -57,12 +59,12 @@ if __name__ == '__main__':
 
 
     rec = enc_mtan_rnn(
-        dim, torch.linspace(0, 1., num_ref_points), latent_dim, rec_hidden,
+        dim, latent_dim, rec_hidden,  # torch.linspace(0, 1., num_ref_points)
         embed_time=embed_time, learn_emb=learn_emb, num_heads=enc_num_heads, device=device
     ).to(device)
 
     dec = dec_mtan_rnn(
-        dim, torch.linspace(0, 1., num_ref_points), latent_dim, gen_hidden,
+        dim, latent_dim, gen_hidden,
         embed_time=embed_time, learn_emb=learn_emb, num_heads=dec_num_heads, device=device).to(device)
 
     model_file = torch.load(model_file_path)
@@ -117,7 +119,19 @@ if __name__ == '__main__':
             assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), num_ref_points)
 
-            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
+            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
+            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            assert subsampled_tp_for_reference[0] == 0.0
+            
+            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
+            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            query = query[query <= 1.0]
+
+            #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=num_ref_points).to(device)
+
+            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
                 out[:, :, : latent_dim],
                 out[:, :, latent_dim:],
@@ -135,7 +149,7 @@ if __name__ == '__main__':
                 time_steps = (
                     observed_tp[None, :, :].repeat(num_sample, 1, 1).view(-1, seqlen)
                 )
-                pred_x = dec(z0, time_steps)
+                pred_x = dec(z0, time_steps, query)
                 pred_x = pred_x.view(num_sample, -1, pred_x.shape[1], pred_x.shape[2])
                 pred_x = pred_x.mean(0)
                 mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
@@ -153,7 +167,13 @@ if __name__ == '__main__':
 
     print(f'Time elapsed = {end-start:.2f}s for processing {len(dataset)} light curves.')
 
-    outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow if it contains more than one entry.
+    #outputs_condensed = np.array([o.cpu().detach().numpy() for o in outputs])  # this will be an array of shape (num_test_examples, num_sample, num_ref_points, latent_dim). The num_sample dimension can be averaged or compressed somehow if it contains more than one entry.
+    padding_value = -99
+    print(outputs[0].shape, outputs[1].shape)
+    outputs_condensed = pad_sequence([o.cpu().detach().permute((1,0,2)) for o in outputs], padding_value=padding_value, batch_first=True)
+    outputs_condensed[outputs_condensed == padding_value] = np.nan
+    print(outputs_condensed.shape)
+    outputs_condensed = outputs_condensed.permute(0,2,1,3)
     print(outputs_condensed.shape)
 
     from itertools import chain

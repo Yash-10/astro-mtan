@@ -157,7 +157,7 @@ def preprocessing_alert_folders(topic_path):
     # APPLY FURTHER SELECTION CRITERIA
     # 1. Some examples are manually removed. See constants.py for details. These are parallel-lc-same-band examples.
     df_alerts = df_alerts[~df_alerts['objectId'].isin(to_remove_objIds)]
-    # 2. Remove ZTF18.. object IDs with one of the TNS SN classification.
+    # 2. Remove ZTF18.. object IDs with one of the TNS SN classification because those may have template issues (most are mostly flat lcs).
     df_alerts = df_alerts[~((df_alerts['objectId'].str.contains('ZTF18')) & (df_alerts['tnsclass'].isin(sn_list)))]
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
@@ -172,7 +172,7 @@ def preprocessing_alert_folders(topic_path):
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
 df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}'+'.parquet')
 
-data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True)
+data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=4, convert_to_tensor=True)
 
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')

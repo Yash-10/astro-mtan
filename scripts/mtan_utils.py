@@ -7,6 +7,7 @@ import numpy as np
 from sklearn import model_selection
 from sklearn import metrics
 
+import utils
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -43,7 +44,7 @@ def normalize_masked_data(data, mask, att_min, att_max):
     att_max[att_max == 0.] = 1.
 
     if (att_max != 0.).all():
-        data_norm = (data - att_min) / att_max
+        data_norm = (data - att_min) / (att_max - att_min)
     else:
         raise Exception("Zero!")
 
@@ -89,7 +90,19 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
             assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
 
-            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp)
+            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
+            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            assert subsampled_tp_for_reference[0] == 0.0
+
+            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
+            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            query = query[query <= 1.0]
+
+            #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=args.num_ref_points).to(device)
+
+            out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
                 out[:, :, : args.latent_dim],
                 out[:, :, args.latent_dim:],
@@ -103,7 +116,7 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
             time_steps = (
                 observed_tp[None, :, :].repeat(num_sample, 1, 1).view(-1, seqlen)
             )
-            pred_x = dec(z0, time_steps)
+            pred_x = dec(z0, time_steps, query)
             pred_x = pred_x.view(num_sample, -1, pred_x.shape[1], pred_x.shape[2])
             pred_x = pred_x.mean(0)
             mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
@@ -291,6 +304,7 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
     combined_record_ids = []
 
     for b, (record_id, tt, vals, mask, labels) in enumerate(batch):
+        print('inside variable_time_collate_fn')
         print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
 
         # Below two lines are added now.
@@ -591,4 +605,5 @@ def get_data_min_max_single_record(record):
     assert data_max.numel() == 1
 
     return data_min, data_max
+
 
