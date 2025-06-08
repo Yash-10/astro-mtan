@@ -33,6 +33,11 @@ def get_lc(
     """Get the light curve given an alerts dataframe (df_alerts) and the objectId (name).
     
     Returns a tuple (object_Id, tt, vals, mask, labels)
+
+    NOTE: Although `make_first_time_zero` is added as a keyword argument, we strongly recommend
+    setting it to True always since it makes it robust to the specific time units your time series
+    exists in. Also, `time_in_hrs=True` is necessary for `delta_t` calculation in `tan_unsupervised.py`
+    to work with correct units.
     """
     # Accumulate all alerts for the provided objectId
     pdf = df_alerts[df_alerts[objectId_column] == name].sort_values(by=jd_column)

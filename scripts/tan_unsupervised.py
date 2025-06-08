@@ -39,16 +39,18 @@ parser.add_argument('--learn-emb', action='store_true')
 parser.add_argument('--enc-num-heads', type=int, default=1)
 parser.add_argument('--dec-num-heads', type=int, default=1)
 #parser.add_argument('--length', type=int, default=20)
-parser.add_argument('--num-ref-points', type=int, default=128)
+#parser.add_argument('--num-ref-points', type=int, default=128)
 parser.add_argument('--dataset', type=str, default='toy')
 parser.add_argument('--enc-rnn', action='store_false')
 parser.add_argument('--dec-rnn', action='store_false')
 parser.add_argument('--sample-tp', type=float, default=1.0)
 #parser.add_argument('--only-periodic', type=str, default=None)
-parser.add_argument('--dropout', type=float, default=0.0)
+#parser.add_argument('--dropout', type=float, default=0.0)
 parser.add_argument('--topic', type=str, help='Name of the topic of the data transfer that contains the alerts.')
 parser.add_argument('--dim', type=int, help='dim value')
 parser.add_argument('--use_wandb', action='store_true', help='whether to use wandb')
+parser.add_argument('--train_val_test_min_max_times_filename', type=str, default='train_val_test_min_max_times.npy')
+parser.add_argument('--ref-resolution-days', type=float, default=2)
 args = parser.parse_args()
 
 
@@ -77,7 +79,7 @@ if __name__ == '__main__':
     elif args.enc == 'mtan_rnn':
         rec = models.enc_mtan_rnn(
             dim, args.latent_dim, args.rec_hidden,   # torch.linspace(0, 1., args.num_ref_points)
-            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device, dropout=args.dropout).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device).to(device)
 
     if args.dec == 'rnn3':
         dec = models.dec_rnn3(
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     elif args.dec == 'mtan_rnn':
         dec = models.dec_mtan_rnn(
             dim, args.latent_dim, args.gen_hidden,   # torch.linspace(0, 1., args.num_ref_points)
-            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device, dropout=args.dropout).to(device)
+            embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.dec_num_heads, device=device).to(device)
 
     if args.use_wandb:  # TODO: See if wandb is working as expected and is logging what we want.
         import wandb
@@ -94,6 +96,11 @@ if __name__ == '__main__':
         run = wandb.init(project="fast_transients_mTAN", name=f'run-{experiment_id}', config=args)
         wandb.watch(rec, log_freq=50)
         wandb.watch(dec, log_freq=50)
+
+    train_val_test_min_max_times = np.load(args.train_val_test_min_max_times_filename)
+    train_max_time = train_val_test_min_max_times[1]
+    delta_t = (args.ref_resolution_days * 24) / train_max_time
+    #delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
 
     params = (list(dec.parameters()) + list(rec.parameters()))
     optimizer = optim.Adam(params, lr=args.lr)
@@ -105,12 +112,12 @@ if __name__ == '__main__':
         dec.load_state_dict(checkpoint['dec_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         print('loading saved weights', checkpoint['epoch'])
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, return_mse=True), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 3, return_mse=True), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 10, return_mse=True), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 20, return_mse=True), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 30, return_mse=True), device=device)
-        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 50, return_mse=True), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 3, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 10, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 20, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 30, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
+        print('Test MSE', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 50, return_mse=True, train_val_test_min_max_times_filename=args.train_val_test_min_max_times_filename), device=device)
 
     best_val_metric = float('inf')  # NOTE: It is assumed the val metric must be minimized.
     total_time = 0.
@@ -149,18 +156,41 @@ if __name__ == '__main__':
             if args.sample_tp == 1.:
                 assert torch.all(observed_tp == subsampled_tp)
 
+            # This is okay to do on the train set but not necessarily for val/test sets
+            # because we normalize val/test time values using train set statistics,
+            # so some normalized time values might be > 1 in val/test.
             assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
 
-            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
-            # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
-            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
-            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
-            assert subsampled_tp_for_reference[0] == 0.0
+            #subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            #running_min_t = torch.tensor(float('inf'), device=device)
+            #running_max_t = torch.tensor(float('-inf'), device=device)
+            #for t in subsampled_tp:
+            #    running_min_t = torch.min(running_min_t, t.min())
+            #    running_max_t = torch.max(running_max_t, t.max())
 
-            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
-            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            #assert running_min_t == 0.0
+            #subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            #assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            #assert subsampled_tp_for_reference[0] == 0.0
+
+            #query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+
+            # NOTE: The query is set not as `torch.linspace(0, 1, num_ref_points). Instead of `1`, the max value is set
+            # based on the characteristics of the batch. If the batch has a single example, query is set differently for each light curve.
+            # NOTE: In future work, an approach to handle different-length query time vectors even if batch size is > 1 needs to be added.
+            # Currently, if you want different query length for each light curve, set batch_size=1 during training, but even if batch_size > 1,
+            # this simple approach as it is now is still better than the linspace approach noted above because the new approach reduces the chances
+            # of finding highly variable-length light curves lengths in a single batch.
+            # NOTE: But it's important to note that if batch_size > 1 is used during validation or testing, it is important to note the following for tasks only involving the latent encoded representations (which are evaluate at these query times): the whole batch will have the same query length defined by the longest light curve in that batch, and hence encoded latent representations for shorter light curves will have unimportant values towards the end of the query time vector - ideally the attention at those places must be small since the model must not use that information much.
+            #print('using query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)')
+            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
             query = query[query <= 1.0]
+
+           # print('using query = torch.linspace(0, 1, 270)')
+           # query = torch.linspace(0, 1, 270)
+
+            ####query = [torch.arange(subsampled_tp.min(), t.max() + delta_t, delta_t) for t in subsampled_tp]
 
             #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=args.num_ref_points).to(device)
             #query = utils.get_reference_times_quantiles(subsampled_tp_for_reference, K=args.num_ref_points).to(device)
@@ -238,6 +268,7 @@ if __name__ == '__main__':
             print('Test Mean Squared Error', mtan_utils.evaluate(dim, rec, dec, test_loader, args, 1, device=device, return_mse=True))
 
     print(f'Time elapsed {total_time/60:.2f} min')
+    wandb.finish()
 
         #if itr % 10 == 0 and args.save:
         #    torch.save({

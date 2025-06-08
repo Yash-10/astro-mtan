@@ -15,7 +15,7 @@ import utils
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cpu')  # Force to use CPU for evaluation since that closely mimics how the model will be used in real applications.
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
-num_ref_points = 128
+ref_resolution_days = 2
 latent_dim = 2
 learn_emb = True
 rec_hidden = 64
@@ -33,7 +33,7 @@ SETTING = 'test'   # 'test', 'train', or 'val'
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
 assert SETTING == DATA_IDS_PATH.split('_')[0]
-model_file_path = 'ftransfer_ztf_2024-05-27_433174_copy_mtan_rnn_mtan_rnn_.h5'
+model_file_path = 'ftransfer_ztf_2025-05-31_430518_mtan_rnn_mtan_rnn_.h5'
 
 
 if __name__ == '__main__':
@@ -48,6 +48,11 @@ if __name__ == '__main__':
     data_Ids = np.load(DATA_IDS_PATH)
     dataset = MyDataSet(data_combined, data_Ids)
     test_loader = DataLoader(dataset, batch_size=1, num_workers=2, shuffle=False)
+
+    train_val_test_min_max_times_filename = 'train_val_test_min_max_times.npy'
+    train_val_test_min_max_times = np.load(train_val_test_min_max_times_filename)
+    train_max_time = train_val_test_min_max_times[1]
+    delta_t = (ref_resolution_days * 24) / train_max_time
 
     #test_loader = torch.load('test_dataloader.pth') # NOTE: This script is only tested for dataloaders with batch size=1; for greater batch sizes, some bugs may be introduced.
     #total_objIds = np.load('total_objIds.npy')
@@ -116,20 +121,21 @@ if __name__ == '__main__':
 
             if sample_tp == 1.:
                 assert torch.all(observed_tp == subsampled_tp)
-            assert subsampled_tp.max() <= 1
+            #assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), num_ref_points)
 
-            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            #subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
             # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
-            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
-            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
-            assert subsampled_tp_for_reference[0] == 0.0
+            #subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            #assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            #assert subsampled_tp_for_reference[0] == 0.0
             
-            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
-            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
-            query = query[query <= 1.0]
-
+            #query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            #query = query[query <= 1.0]
             #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=num_ref_points).to(device)
+
+            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
+            query = query[query <= 1.0]
 
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
@@ -141,7 +147,8 @@ if __name__ == '__main__':
             ).to(device)
             z0 = epsilon * torch.exp(0.5 * qz0_logvar) + qz0_mean
             z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
-            outputs.append(z0)
+            # NOTE: `outputs` only contain the mean vector since it's expected to be used for visualization.
+            outputs.append(qz0_mean.view(-1, qz0_mean.shape[1], qz0_mean.shape[2]))
             objIds.append(batch[1])
 
             if store_decoded_lcs:

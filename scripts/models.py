@@ -37,11 +37,12 @@ class multiTimeAttention(nn.Module):
         self.linears = nn.ModuleList([nn.Linear(embed_time, embed_time), 
                                       nn.Linear(embed_time, embed_time),
                                       nn.Linear(input_dim*num_heads, nhidden)])
-        
+ 
     def attention(self, query, key, value, mask=None, dropout=None):
         "Compute 'Scaled Dot Product Attention'"
         dim = value.size(-1)
         d_k = query.size(-1)
+        #print(query.shape, key.shape)
         scores = torch.matmul(query, key.transpose(-2, -1)) \
                  / math.sqrt(d_k)
         scores = scores.unsqueeze(-1).repeat_interleave(dim, dim=-1)
@@ -49,11 +50,10 @@ class multiTimeAttention(nn.Module):
             scores = scores.masked_fill(mask.unsqueeze(-3) == 0, -1e9)
         p_attn = F.softmax(scores, dim = -2)
         if dropout is not None:
-            #p_attn = dropout(p_attn)
-            p_attn = nn.Dropout(p=0.1)(p_attn)
+            p_attn = dropout(p_attn)
         return torch.sum(p_attn*value.unsqueeze(-3), -2), p_attn
-    
-    
+ 
+
     def forward(self, query, key, value, mask=None, dropout=None, return_att=False):
         "Compute 'Scaled Dot Product Attention'"
         batch, seq_len, dim = value.size()
@@ -73,7 +73,7 @@ class multiTimeAttention(nn.Module):
     
 class enc_mtan_rnn(nn.Module):
     def __init__(self, input_dim, latent_dim=2, nhidden=16, 
-                 embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
+                 embed_time=16, num_heads=1, learn_emb=False, device='cuda'):
         super(enc_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
@@ -81,7 +81,6 @@ class enc_mtan_rnn(nn.Module):
         self.nhidden = nhidden
         #self.query = query
         self.learn_emb = learn_emb
-        self.dropout = dropout
         self.att = multiTimeAttention(2*input_dim, nhidden, embed_time, num_heads)
         self.gru_rnn = nn.GRU(nhidden, nhidden, bidirectional=True, batch_first=True)
         #self.conv = nn.Conv1d(256, nhidden, kernel_size=3)  # ADDED
@@ -120,10 +119,11 @@ class enc_mtan_rnn(nn.Module):
         if self.learn_emb:
             key = self.learn_time_embedding(time_steps).to(self.device)
             query = self.learn_time_embedding(query_times.unsqueeze(0)).to(self.device)
+            #print(query.shape, query_times.shape, key.shape, time_steps.shape)
         else:
             key = self.fixed_time_embedding(time_steps).to(self.device)
             query = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, x.float(), mask.float(), return_att=return_att, dropout=self.dropout)
+        out = self.att(query, key, x.float(), mask.float(), return_att=return_att)
         if return_att:
             out = out[0]
         out, _ = self.gru_rnn(out)
@@ -134,7 +134,7 @@ class enc_mtan_rnn(nn.Module):
 class dec_mtan_rnn(nn.Module):
  
     def __init__(self, input_dim, latent_dim=2, nhidden=16, 
-                 embed_time=16, num_heads=1, learn_emb=False, device='cuda', dropout=False):
+                 embed_time=16, num_heads=1, learn_emb=False, device='cuda'):
         super(dec_mtan_rnn, self).__init__()
         self.embed_time = embed_time
         self.dim = input_dim
@@ -142,7 +142,6 @@ class dec_mtan_rnn(nn.Module):
         self.nhidden = nhidden
         #self.query = query
         self.learn_emb = learn_emb
-        self.dropout = dropout
         self.att = multiTimeAttention(2*nhidden, 2*nhidden, embed_time, num_heads)
         self.gru_rnn = nn.GRU(latent_dim, nhidden, bidirectional=True, batch_first=True)    
         #self.conv = nn.Conv1d(latent_dim, nhidden, kernel_size=3)  # ADDED
@@ -183,7 +182,7 @@ class dec_mtan_rnn(nn.Module):
         else:
             query = self.fixed_time_embedding(time_steps).to(self.device)
             key = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, out, dropout=self.dropout)
+        out = self.att(query, key, out)
         out = self.z0_to_obs(out)
         return out        
    

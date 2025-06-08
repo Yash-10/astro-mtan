@@ -58,13 +58,19 @@ def normalize_masked_data(data, mask, att_min, att_max):
     return data_norm, att_min, att_max
 
 
-def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_coef=None, return_mse=True):
+def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_coef=None, return_mse=True, train_val_test_min_max_times_filename='train_val_test_min_max_times.npy'):
     """
     If return_mse is False, the average ELBO will be returned. In this case, both kl_coef and k_iwae will be used; the latter is found from `args` and kl_coef must be given.
     If return_mse is True, mse is returned.
     """
     if not return_mse and kl_coef is None:
         raise ValueError('kl_coef must be provided is return_mse is False.')
+
+    # NOTE: We use max_time calculated on train set for val and test also
+    train_val_test_min_max_times = np.load(train_val_test_min_max_times_filename)
+    train_max_time = train_val_test_min_max_times[1]
+    delta_t = (args.ref_resolution_days * 24) / train_max_time
+
     mse, test_n = 0.0, 0.0
     test_loss = 0
     with torch.no_grad():
@@ -87,20 +93,22 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
             if args.sample_tp == 1.:
                 assert torch.all(observed_tp == subsampled_tp)
 
-            assert subsampled_tp.max() <= 1
+            #assert subsampled_tp.max() <= 1
             ##query = torch.linspace(0, subsampled_tp.max(), args.num_ref_points)
 
-            subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
+            #subsampled_tp_for_reference = utils.trim_padded_zeros_tensor_2d(subsampled_tp)
             # We simply flatten the time value list for the different bands. That's okay because we only need the min and max.
-            subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
-            assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
-            assert subsampled_tp_for_reference[0] == 0.0
+            #subsampled_tp_for_reference = torch.cat(subsampled_tp_for_reference)
+            #assert subsampled_tp_for_reference[0] == subsampled_tp_for_reference.min()
+            #assert subsampled_tp_for_reference[0] == 0.0
 
-            delta_t = 0.00547746036  # = (2 * 24) / max_time across train set, which is 8763.185277599841
-            query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
-            query = query[query <= 1.0]
+            #query = torch.arange(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max() + delta_t, delta_t)
+            #query = query[query <= 1.0]
 
             #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=args.num_ref_points).to(device)
+
+            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
+            query = query[query <= 1.0]
 
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
@@ -122,7 +130,6 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
             mse += mean_squared_error(observed_data, pred_x, observed_mask) * batch
             test_n += batch
 
-            # NOTE: Below code added by me.
             # compute loss
             if not return_mse:
                 logpx, analytic_kl = compute_losses(
@@ -271,7 +278,7 @@ def get_mimiciii_data(args):
 
 
 def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, activity=False,
-                             data_min=None, data_max=None):
+                             data_min=None, data_max=None, train_min_time=None, train_max_time=None):
     """
     Expects a batch of time series data in the form of (record_id, tt, vals, mask, labels) where
       - record_id is a patient id
@@ -304,8 +311,8 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
     combined_record_ids = []
 
     for b, (record_id, tt, vals, mask, labels) in enumerate(batch):
-        print('inside variable_time_collate_fn')
-        print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
+        #print('inside variable_time_collate_fn')
+        #print(tt.shape, vals.shape, mask.shape, tt.size(0), b, maxlen)
 
         # Below two lines are added now.
         data_min, data_max = get_data_min_max_single_record((record_id, tt, vals, mask, labels))
@@ -339,8 +346,13 @@ def variable_time_collate_fn(batch, device=torch.device("cpu"), classify=False, 
         #assert torch.max(enc_combined_tt) == 1.0
         # The below assertion is valid only if make_first_time_zero=True in get_lc inside prepare_data since only then the first time value will be zero.
         assert torch.min(enc_combined_tt) == 0.0
-        enc_combined_tt = (enc_combined_tt - torch.min(enc_combined_tt)) / (torch.max(enc_combined_tt) - torch.min(enc_combined_tt))
-        assert torch.all((enc_combined_tt >= 0) & (enc_combined_tt <= 1))
+        if train_min_time is None or train_max_time is None:
+            enc_combined_tt = (enc_combined_tt - torch.min(enc_combined_tt)) / (torch.max(enc_combined_tt) - torch.min(enc_combined_tt))
+        else:
+            assert train_min_time == 0.0
+            enc_combined_tt = (enc_combined_tt - train_min_time) / (train_max_time - train_min_time)
+
+        #assert torch.all((enc_combined_tt >= 0) & (enc_combined_tt <= 1))
         #enc_combined_tt = enc_combined_tt / torch.max(enc_combined_tt)
 
     combined_data = torch.cat(
@@ -527,6 +539,25 @@ def subsample_timepoints(data, time_steps, mask, percentage_tp_to_sample=None):
 
     return data, time_steps, mask
 
+
+def subsample_timepoints_continuous_window(data, time_steps, mask, percentage_tp_to_sample=None):
+    # Subsample percentage of points from each time series
+    for i in range(data.size(0)):
+        # take mask for current training sample and sum over all features --
+        # figure out which time points don't have any measurements at all in this batch
+        current_mask = mask[i].sum(-1).cpu()
+        non_missing_tp = np.where(current_mask > 0)[0]
+        n_tp_current = len(non_missing_tp)
+        n_to_sample = int(n_tp_current * percentage_tp_to_sample)
+        start = np.random.randint(0, n_tp_current - n_to_sample + 1)
+        subsampled_idx = non_missing_tp[start:start + n_to_sample]
+        tp_to_set_to_zero = np.setdiff1d(non_missing_tp, subsampled_idx)
+
+        data[i, tp_to_set_to_zero] = 0.
+        if mask is not None:
+            mask[i, tp_to_set_to_zero] = 0.
+
+    return data, time_steps, mask
 
 import os
 import utils

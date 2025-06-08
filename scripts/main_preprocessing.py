@@ -9,7 +9,7 @@ from utils import read_alert
 from prepare_data import prepare_data, get_tns_tde_alerts
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2024-05-27_433174'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2025-05-31_430518'
 
 """
 def f_custom_sn(row):
@@ -70,11 +70,11 @@ def preprocessing_alert_folders(topic_path):
             #shutil.move(raw_dir, AGN_DIR)  # NOTE: Now alerts are not transferred to a separate directory since that is less flexible when we want to assign custom_.. class not based on finkclass, e.g., tnsclass. Moving folders directly in this case is not possible.
             df_alerts.finkclass.replace(unquote(dir_), 'custom_agn', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir_ in stars_list:
+        #elif dir_ in stars_list:
             #shutil.move(raw_dir, STARS_DIR)
-            df_alerts.finkclass.replace(unquote(dir_), 'custom_stars', inplace=True)
+        #    df_alerts.finkclass.replace(unquote(dir_), 'custom_stars', inplace=True)
             # shutil.rmtree(raw_dir)
-        elif dir_ == 'SN' or dir_ == 'SN%20candidate':
+        #elif dir_ == 'SN' or dir_ == 'SN%20candidate':
             # NOTE: For SN, the finer TNS classes wouldn't be present at the folder level, all those will instead be combined inside these two folders. To get the actual TNS class, one can read the parquets inside these two folders and look at the `tnsclass` column.
             # Also NOTE: "(TNS) SN ..." may also be present in other folders like AGN, but those will not be given the `custom_sn` label. This is irrelevant for the unsupervised learning, but may become important for supervised classifications.
             #if df_alerts.tnsclass.isin(sn_list):  # TODO: Not sure if this condition is needed. Sometimes the tnsclass in these cases may contain "Unknown" as well, so this condition removes those cases. But if it's needed or not is not entirely clear.
@@ -82,14 +82,14 @@ def preprocessing_alert_folders(topic_path):
             shutil.move(raw_dir, SN_DIR)
             df_alerts.finkclass.replace(unquote(dir_), 'custom_sn', inplace=True)
             """
-            pass
+            #pass
             # shutil.rmtree(raw_dir)
         #elif dir in simbad_galaxies_list:
         #    shutil.move(raw_dir, SIMBAD_GALAXIES_DIR)
         #    df_alerts.finkclass.replace(dir, 'custom_simbad_galaxies', inplace=True)
             # shutil.rmtree(raw_dir)
-        else:
-            print(f'Folder {dir_} not in the alerts, skipping...')
+        #else:
+        #    print(f'Folder {dir_} not in the alerts, skipping...')
 
     # NOTE: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
     def f(row):
@@ -97,6 +97,9 @@ def preprocessing_alert_folders(topic_path):
      
     df_alerts['finkclass'] = df_alerts.apply(lambda row: f(row), axis = 1)
     #df_alerts.loc[df_alerts.tnsclass.isin(sn_list), 'finkclass'] = 'custom_sn'
+
+    # NOTE: The below condition must be true if only custom_agn, custom_sn, and Early SN Ia candidate are expected to be in the dataframe of alerts.
+    assert (len(df_alerts['finkclass'].unique()) == 3) and ('custom_agn' in df_alerts['finkclass'].unique()) and ('custom_sn' in df_alerts['finkclass'].unique()) and ('Early SN Ia candidate' in df_alerts['finkclass'].unique())
 
     print('finkclass value_counts after first processing...')
     print(df_alerts['finkclass'].value_counts())
@@ -122,8 +125,7 @@ def preprocessing_alert_folders(topic_path):
     # Select the objectIds (transients) that have more than or equal to three alerts in atleast one passband/filter.
     # Note that we mean more than three alerts in the time period in which the alerts are captured and not from the start of the survey.
     # See notes above.
-    # For requiring three rather than two alerts, it's because if there are one or two alerts, you can fit anything to them with good accuracy.
-    # Only when you have three points or more, can we fit something meaningful.
+    # NOTE: Justification for requiring three rather than two alerts, it's because if there are one or two alerts, you can fit anything to them with good accuracy. Only when you have three points or more, can we fit something meaningful.
     #df_alerts = df_alerts.groupby('objectId').filter(
     #    lambda group: (len(group[group['fid'] == 1]) >= 3) or (len(group[group['fid'] == 2]) >= 3)
     #)
@@ -137,16 +139,22 @@ def preprocessing_alert_folders(topic_path):
     # 3. For SN + AGN dataset
     df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate') | (df_alerts['finkclass'] == 'custom_agn')]
 
-    # Select those having >=10 points in the light curve and at least 4 points in each band.
+    # NOTE: The below condition can be used if one desires light curves that are not too sparse.
+    ## Select those having >=10 points in the light curve and at least 4 points in each band.
+    #df_alerts = df_alerts.groupby('objectId').filter(
+    #        lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4)  # and (len(group) <= 30)
+    #)
+
+    # Select those having at least 3 points in each band.
     df_alerts = df_alerts.groupby('objectId').filter(
-            lambda group: (len(group) >= 10) and (len(group[group['fid'] == 1]) >= 4) and (len(group[group['fid'] == 2]) >= 4)  # and (len(group) <= 30)
+            lambda group: (len(group[group['fid'] == 1]) >= 3) and (len(group[group['fid'] == 2]) >= 3)
     )
 
     print(f'{len(df_alerts)} alerts selected out of {df_alerts_shape[0]}')
 
-    for objectId in df_alerts['objectId'].unique():
-        pdf = df_alerts[df_alerts['objectId'] == objectId]
-        assert (len(pdf) >= 10) and (len(pdf[pdf['fid'] == 1]) >= 4) and (len(pdf[pdf['fid'] == 2]) >= 4)
+    #for objectId in df_alerts['objectId'].unique():
+    #    pdf = df_alerts[df_alerts['objectId'] == objectId]
+    #    assert (len(pdf[pdf['fid'] == 1]) >= 3) and (len(pdf[pdf['fid'] == 2]) >= 3)
         #assert (len(pdf[pdf['fid'] == 1]) >= 3) or (len(pdf[pdf['fid'] == 2]) >= 3)
 
     ################### Adding alerts manually #######################################
@@ -157,7 +165,7 @@ def preprocessing_alert_folders(topic_path):
     # APPLY FURTHER SELECTION CRITERIA
     # 1. Some examples are manually removed. See constants.py for details. These are parallel-lc-same-band examples.
     df_alerts = df_alerts[~df_alerts['objectId'].isin(to_remove_objIds)]
-    # 2. Remove ZTF18.. object IDs with one of the TNS SN classification because those may have template issues (most are mostly flat lcs).
+    # 2. Remove ZTF18.. object IDs with one of the TNS SN classification because these may have template issues (most are mostly flat lcs).
     df_alerts = df_alerts[~((df_alerts['objectId'].str.contains('ZTF18')) & (df_alerts['tnsclass'].isin(sn_list)))]
 
     print(f'No. of alerts (after preprocessing) = {len(df_alerts)}')
@@ -172,7 +180,7 @@ def preprocessing_alert_folders(topic_path):
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
 df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}'+'.parquet')
 
-data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=4, convert_to_tensor=True)
+data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True)
 
 torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
 torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')
@@ -190,6 +198,7 @@ np.save('duration_lcs.npy', data_obj["duration_lcs"])
 np.save("num_datapoints_lcs.npy", data_obj["seq_len_all"])
 np.save('min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
 np.save('min_max_mags.npy', data_obj['min_max_mags'])
+np.save('train_val_test_min_max_times.npy', data_obj['train_val_test_min_max_times'])
 
 """
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.
