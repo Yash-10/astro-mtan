@@ -335,3 +335,32 @@ def trim_padded_zeros_tensor_2d(t):
     """This function added by me."""
     return [trim_padded_zeros_tensor(time_tensor) for time_tensor in t]
 
+
+from torch.nn.utils.rnn import pad_sequence
+
+def generate_query_matrix(subsampled_tp: torch.Tensor, delta_t: float, padding_value=-999) -> torch.Tensor:
+    """
+    Given:
+      subsampled_tp: Tensor of shape (batch_size, seqlen), containing time values for a batch
+      delta_t (float): Step size (or resolution) for generating query times (in normalized time space)
+
+    Returns:
+      query_matrix: Tensor of shape (batch_size, n), where n = max_i len(arange(t_i.min(), t_i.max()+delta_t, delta_t))
+                    Rows are right‐padded with padding_value to match the longest sequence.
+    """
+    device = subsampled_tp.device
+    batch_size = subsampled_tp.size(0)
+    queries = []
+
+    for i in range(batch_size):
+        t = subsampled_tp[i]                  # shape: (seqlen,)
+        t_min, t_max = t.min(), t.max()
+        q_i = torch.arange(t_min, t_max + delta_t, delta_t, device=device)
+        queries.append(q_i)
+
+    # Pad all sequences to the same length (max_i Li) along dim=0
+    query_matrix = pad_sequence(queries, batch_first=True, padding_value=padding_value)
+
+    return query_matrix
+
+

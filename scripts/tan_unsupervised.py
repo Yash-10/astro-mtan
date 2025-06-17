@@ -62,7 +62,6 @@ if __name__ == '__main__':
     np.random.seed(seed)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     if device == 'cuda':
         torch.cuda.manual_seed(seed)
 
@@ -184,10 +183,12 @@ if __name__ == '__main__':
             # of finding highly variable-length light curves lengths in a single batch.
             # NOTE: But it's important to note that if batch_size > 1 is used during validation or testing, it is important to note the following for tasks only involving the latent encoded representations (which are evaluate at these query times): the whole batch will have the same query length defined by the longest light curve in that batch, and hence encoded latent representations for shorter light curves will have unimportant values towards the end of the query time vector - ideally the attention at those places must be small since the model must not use that information much.
             #print('using query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)')
-            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
-            query = query[query <= 1.0]
+            #query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
+            #query = query[query <= 1.0]
 
-           # print('using query = torch.linspace(0, 1, 270)')
+            query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
+
+               # print('using query = torch.linspace(0, 1, 270)')
            # query = torch.linspace(0, 1, 270)
 
             ####query = [torch.arange(subsampled_tp.min(), t.max() + delta_t, delta_t) for t in subsampled_tp]
@@ -256,7 +257,7 @@ if __name__ == '__main__':
                 'rec_state_dict': rec_state_dict,
                 'dec_state_dict': dec_state_dict,
                 'optimizer_state_dict': optimizer_state_dict,
-            }, args.dataset + '_' + args.enc + '_' + args.dec + '_' + '.h5')
+            }, args.dataset + '_' + args.enc + '_' + args.dec + '.h5')
 
         # Validation end.
         #scheduler.step(val_metric)

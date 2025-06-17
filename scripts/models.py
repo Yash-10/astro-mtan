@@ -38,8 +38,16 @@ class multiTimeAttention(nn.Module):
                                       nn.Linear(embed_time, embed_time),
                                       nn.Linear(input_dim*num_heads, nhidden)])
  
-    def attention(self, query, key, value, mask=None, dropout=None):
-        "Compute 'Scaled Dot Product Attention'"
+    def attention(self, query, key, value, mask=None, query_mask=None, key_mask=None, dropout=None):
+        """Compute 'Scaled Dot Product Attention'
+        
+        Changes made:
+        - attention() now accepts `query_mask` and `key_mask` as inputs.
+        - Both these inputs are meant to be used to define masks for query times,
+            it's just that query_mask defines the mask for the 2D `query_times` for
+            the encoder, but `key_mask` defines the mask for `query_times` for the
+            decoder, because in the decoder the query times becomes the key.
+        """
         dim = value.size(-1)
         d_k = query.size(-1)
         #print(query.shape, key.shape)
@@ -48,13 +56,26 @@ class multiTimeAttention(nn.Module):
         scores = scores.unsqueeze(-1).repeat_interleave(dim, dim=-1)
         if mask is not None:
             scores = scores.masked_fill(mask.unsqueeze(-3) == 0, -1e9)
+
+        # Mask out scores where query_mask == 0.
+        if query_mask is not None:
+            B, h, Tq, Tk, d = scores.shape
+            # reshape to [B, 1, Tq, 1, 1] then expand to [B, h, Tq, Tk, dim]
+            qm = query_mask.view(B, 1, Tq, 1, 1).expand(B, h, Tq, Tk, dim)
+            scores = scores.masked_fill(qm == 0, -1e9)
+        # Mask out scores where key_mask = 0.
+        if key_mask is not None:
+            B, h, Tq, Tk, d = scores.shape
+            km = key_mask.view(B, 1, Tk, 1, 1).expand(B, h, Tk, Tq, dim).transpose(2, 3)
+            scores = scores.masked_fill(km == 0, -1e9)
+
         p_attn = F.softmax(scores, dim = -2)
         if dropout is not None:
             p_attn = dropout(p_attn)
         return torch.sum(p_attn*value.unsqueeze(-3), -2), p_attn
  
 
-    def forward(self, query, key, value, mask=None, dropout=None, return_att=False):
+    def forward(self, query, key, value, mask=None, query_mask=None, key_mask=None, dropout=None, return_att=False):
         "Compute 'Scaled Dot Product Attention'"
         batch, seq_len, dim = value.size()
         if mask is not None:
@@ -63,7 +84,7 @@ class multiTimeAttention(nn.Module):
         value = value.unsqueeze(1)
         query, key = [l(x).view(x.size(0), -1, self.h, self.embed_time_k).transpose(1, 2)
                       for l, x in zip(self.linears, (query, key))]
-        x, attn = self.attention(query, key, value, mask, dropout)
+        x, attn = self.attention(query, key, value, mask, query_mask, key_mask, dropout)
         x = x.transpose(1, 2).contiguous() \
              .view(batch, -1, self.h * dim)
         if return_att:
@@ -117,13 +138,18 @@ class enc_mtan_rnn(nn.Module):
         mask = x[:, :, self.dim:]
         mask = torch.cat((mask, mask), 2)
         if self.learn_emb:
+            # NOTE: Only when learn_emb is True, we have changed the original mTAN code
+            # to accept two-dimensional query values.
+            # First, a 2D query mask is created. The `unsqueeze(0)` operation in the line: `query = self.learn_time_embedding(..)`
+            # is removed because the 2D matrix already include the batch dimension as the first dimension.
+            query_mask = (query_times != -999).float()
             key = self.learn_time_embedding(time_steps).to(self.device)
-            query = self.learn_time_embedding(query_times.unsqueeze(0)).to(self.device)
+            query = self.learn_time_embedding(query_times).to(self.device)
             #print(query.shape, query_times.shape, key.shape, time_steps.shape)
         else:
             key = self.fixed_time_embedding(time_steps).to(self.device)
             query = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, x.float(), mask.float(), return_att=return_att)
+        out = self.att(query, key, x.float(), mask.float(), query_mask.float(), return_att=return_att)
         if return_att:
             out = out[0]
         out, _ = self.gru_rnn(out)
@@ -177,12 +203,24 @@ class dec_mtan_rnn(nn.Module):
         out, _ = self.gru_rnn(z)
         time_steps = time_steps.cpu()
         if self.learn_emb:
+            # NOTE: Only when learn_emb is True, we have changed the original mTAN code (just like that for `enc_mtan_rnn`)
+            # to accept two-dimensional query values.
+            # First, a 2D key mask is created using the query times (since query becomes keys and vice versa in decoder compared to encoder).
+            # The key and the corresponding key mask are repeated across the batch dimension.
+            # The `unsqueeze(0)` operation in the line: `query = self.learn_time_embedding(..)`
+            # is removed because the 2D matrix already include the batch dimension as the first dimension.
             query = self.learn_time_embedding(time_steps).to(self.device)
-            key = self.learn_time_embedding(query_times.unsqueeze(0)).to(self.device)
+            key_mask = (query_times != -999).float()
+            key = self.learn_time_embedding(query_times).to(self.device)
+            b_times_nsamples = len(query) // len(key)
+            key = key.repeat(b_times_nsamples, 1, 1)
+            key_mask = key_mask.repeat(b_times_nsamples, 1)
+            #print(key_mask.shape)
         else:
             query = self.fixed_time_embedding(time_steps).to(self.device)
             key = self.fixed_time_embedding(query_times.unsqueeze(0)).to(self.device)
-        out = self.att(query, key, out)
+
+        out = self.att(query, key, out, key_mask=key_mask)
         out = self.z0_to_obs(out)
         return out        
    

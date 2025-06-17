@@ -29,7 +29,7 @@ dim = 2
 seed = 42
 store_decoded_lcs = True
 # NOTE: Change the `SETTING` based on which dataset to evaluate the model on.
-SETTING = 'test'   # 'test', 'train', or 'val'
+SETTING = 'train'   # 'test', 'train', or 'val'
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
 assert SETTING == DATA_IDS_PATH.split('_')[0]
@@ -134,8 +134,10 @@ if __name__ == '__main__':
             #query = query[query <= 1.0]
             #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=num_ref_points).to(device)
 
-            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
-            query = query[query <= 1.0]
+            #query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
+            #query = query[query <= 1.0]
+
+            query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
 
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
@@ -147,8 +149,17 @@ if __name__ == '__main__':
             ).to(device)
             z0 = epsilon * torch.exp(0.5 * qz0_logvar) + qz0_mean
             z0 = z0.view(-1, qz0_mean.shape[1], qz0_mean.shape[2])
-            # NOTE: `outputs` only contain the mean vector since it's expected to be used for visualization.
-            outputs.append(qz0_mean.view(-1, qz0_mean.shape[1], qz0_mean.shape[2]))
+            
+            # NOTE: `outputs` only contain the mean vector since it's expected to be used for visualization of latent representations.
+            # Each element in `outputs` is of shape (batch_size x seqlen x dim), where seqlen is different for each element.
+
+            # Only preserve encoded vector values where query time is valid, else set it to -999.
+            output_masked = torch.where(
+                query.unsqueeze(-1) != -999,
+                qz0_mean.view(-1, qz0_mean.shape[1], qz0_mean.shape[2]),
+                -999
+            )
+            outputs.append(output_masked)
             objIds.append(batch[1])
 
             if store_decoded_lcs:

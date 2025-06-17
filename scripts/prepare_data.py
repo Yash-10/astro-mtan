@@ -148,6 +148,10 @@ class MyDataSet(torch.utils.data.Dataset):
 
 
 class TruncateLightCurve(object):
+    """Takes in a light curve, randomly selects percentage of observed time points to sample within the range
+    provided by `percentage_tp_to_sample_range` and selects observed time points randomly from the
+    light curve. This function is only applied at runtime to light curves with >=min_datapoints_each_filter
+    data points in its light curve, summed across all bands."""
     def __init__(self, percentage_tp_to_sample_range=(0.3, 0.5), dim=2, min_datapoints_each_filter=10):
         if not (0.0 <= percentage_tp_to_sample_range[0] <= 1.0):
             raise ValueError('Lower end probability in `percentage_tp_to_sample_range` should be a floating point value in the interval [0.0, 1.0].')
@@ -182,6 +186,11 @@ class TruncateLightCurve(object):
 
 
 class ContinuousTruncateLightCurve(object):
+    """Takes in a light curve, randomly selects percentage of observed time points to sample within the range
+    provided by `percentage_tp_to_sample_range` and selects continuous observed time points from the
+    light curve. It is ensured that the continuous time points selected don't fall outside the observed time range.
+    This function is only applied at runtime to light curves with >=min_datapoints_each_filter data points in its
+    light curve, summed across all bands."""
     def __init__(self, percentage_tp_to_sample_range=(0.3, 0.5), dim=2, min_datapoints_each_filter=10):
         #if not(0.0 <= p <= 1.0):
         #    raise ValueError('`p` should be a floating point value in the interval [0.0, 1.0].')
@@ -218,7 +227,8 @@ class ContinuousTruncateLightCurve(object):
             return subsampled_sample
 
 
-class apply_truncate_transform_random:
+class apply_truncate_transforms_random:
+    """Takes in two truncate transforms as input, selects one among them randomly, and then apply it with probability, `p`"""
     def __init__(self, truncate_transform_A, truncate_transform_B, p=0.5):
         if not(0.0 <= p <= 1.0):
             raise ValueError('`p` should be a floating point value in the interval [0.0, 1.0].')
@@ -230,6 +240,18 @@ class apply_truncate_transform_random:
         transform_to_apply = self.truncate_transform_A if random.choice([0, 1]) == 0 else self.truncate_transform_B
         # print(type(transform_to_apply).__name__)  # to see which truncate transform is actually being applied
         return transform_to_apply(x) if torch.rand(1) < self.p else x
+
+
+class apply_truncate_transform_random:
+    """Takes in a truncate transform and apply it with probability `p`"""
+    def __init__(self, truncate_transform, p=0.5):
+        if not(0.0 <= p <= 1.0):
+            raise ValueError('`p` should be a floating point value in the interval [0.0, 1.0].')
+        self.truncate_transform = truncate_transform
+        self.p = p
+
+    def __call__(self, x):
+        return self.truncate_transform(x) if torch.rand(1) < self.p else x
 
 
 def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False):
@@ -316,6 +338,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the val dataset: {val_max_time}, {val_min_time}')
     print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the test dataset: {test_max_time}, {test_min_time}')
 
+
     train_data_combined, train_data_Ids = variable_time_collate_fn(train_data, device, classify=classify, activity=activity, data_min=data_min, data_max=data_max, train_min_time=train_min_time, train_max_time=train_max_time)
     val_data_combined, val_data_Ids = variable_time_collate_fn(val_data, device, classify=classify, activity=activity,
                                                       data_min=data_min, data_max=data_max, train_min_time=train_min_time, train_max_time=train_max_time)
@@ -357,12 +380,16 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     # Below four lines added latest by me.
     #transform = SemiRandomTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.5), p=0.5, dim=dim, min_datapoints_each_filter=10)
     #transform = SemiRandomContinuousTruncateLightCurve(n_to_sample_range=(6, 20), p=0.5, dim=2, min_datapoints_each_filter=10)
-    #transform = apply_truncate_transform_random(
-    #        ContinuousTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
-     #       TruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
-     #       p=0.5
+    #transform = apply_truncate_transforms_random(
+    #    ContinuousTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+    #    TruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+    #    p=0.5
     #)
-    transform = None
+    
+    transform = apply_truncate_transform_random(
+        ContinuousTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+        p=0.5
+    )
     train_dataset = MyDataSet(train_data_combined, train_data_Ids, transform=transform)
     val_dataset = MyDataSet(val_data_combined, val_data_Ids, transform=None)
     test_dataset = MyDataSet(test_data_combined, test_data_Ids, transform=None)
@@ -400,7 +427,8 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         "test_dataloader": test_loader,
         "val_dataloader": val_loader,
         "input_dim": dim,
-        "train_val_test_min_max_times": np.array([train_min_time, train_max_time, val_min_time, val_max_time, test_min_time, test_max_time])
+        "train_val_test_min_max_times": np.array([train_min_time, train_max_time, val_min_time, val_max_time, test_min_time, test_max_time]),
+        "train_min_max_times": np.array([train_min_time, train_max_time])
     }
 
     return data_obj

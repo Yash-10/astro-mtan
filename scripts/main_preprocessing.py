@@ -182,24 +182,25 @@ df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", 
 
 data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True)
 
-torch.save(data_obj["train_dataloader"], 'train_dataloader.pth')
-torch.save(data_obj["test_dataloader"], 'test_dataloader.pth')
-torch.save(data_obj["val_dataloader"], 'val_dataloader.pth')
-torch.save(data_obj["train_data_combined"], 'train_data_combined.pth')
-torch.save(data_obj["val_data_combined"], 'val_data_combined.pth')
-torch.save(data_obj["test_data_combined"], 'test_data_combined.pth')
-np.save('total_objIds.npy', data_obj["total_objIds"])
-np.save('train_objIds.npy', data_obj["train_objIds"])
-np.save('val_objIds.npy', data_obj["val_objIds"])
-np.save('test_objIds.npy', data_obj["test_objIds"])
+suffix = 'NEW_NORM'  # temp
+torch.save(data_obj["train_dataloader"], f'train_dataloader_{suffix}.pth')
+torch.save(data_obj["test_dataloader"], f'test_dataloader_{suffix}.pth')
+torch.save(data_obj["val_dataloader"], f'val_dataloader_{suffix}.pth')
+torch.save(data_obj["train_data_combined"], f'train_data_combined_{suffix}.pth')
+torch.save(data_obj["val_data_combined"], f'val_data_combined_{suffix}.pth')
+torch.save(data_obj["test_data_combined"], f'test_data_combined_{suffix}.pth')
+np.save(f'total_objIds_{suffix}.npy', data_obj["total_objIds"])
+np.save(f'train_objIds_{suffix}.npy', data_obj["train_objIds"])
+np.save(f'val_objIds_{suffix}.npy', data_obj["val_objIds"])
+np.save(f'test_objIds_{suffix}.npy', data_obj["test_objIds"])
 #np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
-np.save('total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
-np.save('duration_lcs.npy', data_obj["duration_lcs"])
-np.save("num_datapoints_lcs.npy", data_obj["seq_len_all"])
-np.save('min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
-np.save('min_max_mags.npy', data_obj['min_max_mags'])
-np.save('train_val_test_min_max_times.npy', data_obj['train_val_test_min_max_times'])
-
+np.save(f'total_common_finkclasses_{suffix}.npy', data_obj["total_common_finkclasses"])
+np.save(f'duration_lcs_{suffix}.npy', data_obj["duration_lcs"])
+np.save(f"num_datapoints_lcs_{suffix}.npy", data_obj["seq_len_all"])
+np.save(f'min_max_magdiffs_{suffix}.npy', data_obj['min_max_magdiffs'])
+np.save(f'min_max_mags_{suffix}.npy', data_obj['min_max_mags'])
+np.save(f'train_val_test_min_max_times_{suffix}.npy', data_obj['train_val_test_min_max_times'])
+np.save(f'train_min_max_times_{suffix}.npy', data_obj['train_min_max_times'])
 """
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.
 # [0] because we assume only one finkclass will have the maximum occurence.

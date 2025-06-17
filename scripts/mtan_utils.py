@@ -107,8 +107,9 @@ def evaluate(dim, rec, dec, test_loader, args, num_sample=10, device="cuda", kl_
 
             #query = torch.linspace(subsampled_tp_for_reference.min(), subsampled_tp_for_reference.max(), steps=args.num_ref_points).to(device)
 
-            query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
-            query = query[query <= 1.0]
+            #query = torch.arange(subsampled_tp.min(), subsampled_tp.max() + delta_t, delta_t)
+            #query = query[query <= 1.0]
+            query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
 
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             qz0_mean, qz0_logvar = (
