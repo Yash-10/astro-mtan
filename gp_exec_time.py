@@ -1,3 +1,5 @@
+# Credit: GP code is taken from https://github.com/tallamjr/astronet
+
 import time
 import numpy as np
 import matplotlib.pyplot as plt
