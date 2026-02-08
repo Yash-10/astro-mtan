@@ -1,0 +1,426 @@
+Namespace(niters=300, lr=0.0001, std=0.01, latent_dim=2, rec_hidden=64, gen_hidden=50, embed_time=128, k_iwae=5, save=1, enc='mtan_rnn', dec='mtan_rnn', fname=None, seed=42, classif=False, norm=True, kl=True, learn_emb=True, enc_num_heads=1, dec_num_heads=1, dataset='ftransfer_ztf_2025-05-31_430518', enc_rnn=True, dec_rnn=True, sample_tp=1.0, topic='ftransfer_ztf_2025-05-31_430518', dim=2, use_wandb=False, train_val_test_min_max_times_filename='train_val_test_min_max_times.npy', ref_resolution_days=2.0) 31464
+parameters: 90174 64732
+Saving the model at epoch 1
+Iter: 1, avg elbo: 55.4281, avg reconst: 66.6279, avg kl: 2.5319, mse: 0.014566, val_metric: 0.010305
+Saving the model at epoch 2
+Iter: 2, avg elbo: 33.4139, avg reconst: 39.8159, avg kl: 2.7873, mse: 0.008470, val_metric: 0.007600
+Saving the model at epoch 3
+Iter: 3, avg elbo: 29.4502, avg reconst: 30.7425, avg kl: 14.6794, mse: 0.007435, val_metric: 0.006606
+Saving the model at epoch 4
+Iter: 4, avg elbo: 27.2671, avg reconst: 27.6162, avg kl: 33.0656, mse: 0.006804, val_metric: 0.006198
+Saving the model at epoch 5
+Iter: 5, avg elbo: 25.5573, avg reconst: 25.8175, avg kl: 42.4803, mse: 0.006282, val_metric: 0.005883
+Test Mean Squared Error tensor(0.0058, device='cuda:0')
+Saving the model at epoch 6
+Iter: 6, avg elbo: 23.7696, avg reconst: 24.0498, avg kl: 46.3081, mse: 0.005941, val_metric: 0.005588
+Saving the model at epoch 7
+Iter: 7, avg elbo: 22.1083, avg reconst: 22.5711, avg kl: 46.1101, mse: 0.005560, val_metric: 0.005300
+Saving the model at epoch 8
+Iter: 8, avg elbo: 20.3344, avg reconst: 21.1336, avg kl: 43.3246, mse: 0.005185, val_metric: 0.005170
+Iter: 9, avg elbo: 18.4169, avg reconst: 21.1714, avg kl: 40.2959, mse: 0.005001, val_metric: 0.005360
+Iter: 10, avg elbo: 17.1510, avg reconst: 20.8948, avg kl: 44.8599, mse: 0.004705, val_metric: 0.005733
+Test Mean Squared Error tensor(0.0056, device='cuda:0')
+Iter: 11, avg elbo: 16.8880, avg reconst: 21.3597, avg kl: 37.0796, mse: 0.004667, val_metric: 0.005531
+Iter: 12, avg elbo: 16.3397, avg reconst: 20.7641, avg kl: 25.8269, mse: 0.004494, val_metric: 0.005453
+Iter: 13, avg elbo: 15.9783, avg reconst: 20.5164, avg kl: 21.1495, mse: 0.004353, val_metric: 0.005335
+Iter: 14, avg elbo: 15.8068, avg reconst: 20.2513, avg kl: 16.3287, mse: 0.004284, val_metric: 0.005293
+Saving the model at epoch 15
+Iter: 15, avg elbo: 15.6336, avg reconst: 20.2643, avg kl: 12.5577, mse: 0.004235, val_metric: 0.005113
+Test Mean Squared Error tensor(0.0052, device='cuda:0')
+Saving the model at epoch 16
+Iter: 16, avg elbo: 14.9354, avg reconst: 18.9810, avg kl: 11.5470, mse: 0.004031, val_metric: 0.004962
+Saving the model at epoch 17
+Iter: 17, avg elbo: 14.8897, avg reconst: 19.4882, avg kl: 9.7942, mse: 0.004081, val_metric: 0.004763
+Iter: 18, avg elbo: 14.4469, avg reconst: 18.4016, avg kl: 8.9143, mse: 0.003934, val_metric: 0.005008
+Iter: 19, avg elbo: 14.1611, avg reconst: 17.8702, avg kl: 8.3656, mse: 0.003790, val_metric: 0.004768
+Iter: 20, avg elbo: 13.9291, avg reconst: 18.0665, avg kl: 8.1879, mse: 0.003850, val_metric: 0.005159
+Test Mean Squared Error tensor(0.0051, device='cuda:0')
+Saving the model at epoch 21
+Iter: 21, avg elbo: 13.6270, avg reconst: 17.0813, avg kl: 7.6748, mse: 0.003689, val_metric: 0.004450
+Saving the model at epoch 22
+Iter: 22, avg elbo: 13.2438, avg reconst: 16.5370, avg kl: 7.6442, mse: 0.003610, val_metric: 0.004402
+Saving the model at epoch 23
+Iter: 23, avg elbo: 12.9984, avg reconst: 15.9615, avg kl: 7.3949, mse: 0.003477, val_metric: 0.004159
+Iter: 24, avg elbo: 12.9349, avg reconst: 15.6150, avg kl: 7.3405, mse: 0.003475, val_metric: 0.004222
+Saving the model at epoch 25
+Iter: 25, avg elbo: 12.3548, avg reconst: 14.8613, avg kl: 7.1272, mse: 0.003279, val_metric: 0.003967
+Test Mean Squared Error tensor(0.0040, device='cuda:0')
+Saving the model at epoch 26
+Iter: 26, avg elbo: 12.2778, avg reconst: 14.5424, avg kl: 6.8691, mse: 0.003306, val_metric: 0.003790
+Iter: 27, avg elbo: 11.7689, avg reconst: 13.6198, avg kl: 6.7348, mse: 0.003105, val_metric: 0.003872
+Iter: 28, avg elbo: 11.4545, avg reconst: 13.4432, avg kl: 6.5811, mse: 0.003012, val_metric: 0.003790
+Saving the model at epoch 29
+Iter: 29, avg elbo: 11.4542, avg reconst: 13.9818, avg kl: 6.3029, mse: 0.003028, val_metric: 0.003624
+Saving the model at epoch 30
+Iter: 30, avg elbo: 11.1368, avg reconst: 13.3003, avg kl: 6.2553, mse: 0.002961, val_metric: 0.003508
+Test Mean Squared Error tensor(0.0034, device='cuda:0')
+Iter: 31, avg elbo: 11.2406, avg reconst: 13.1697, avg kl: 5.9964, mse: 0.002990, val_metric: 0.003592
+Iter: 32, avg elbo: 10.9240, avg reconst: 12.7587, avg kl: 5.9600, mse: 0.002918, val_metric: 0.003624
+Iter: 33, avg elbo: 10.7660, avg reconst: 12.6774, avg kl: 5.8773, mse: 0.002871, val_metric: 0.003544
+Saving the model at epoch 34
+Iter: 34, avg elbo: 10.4580, avg reconst: 12.5911, avg kl: 5.8573, mse: 0.002808, val_metric: 0.003282
+Saving the model at epoch 35
+Iter: 35, avg elbo: 10.5450, avg reconst: 12.5856, avg kl: 5.7835, mse: 0.002807, val_metric: 0.003180
+Test Mean Squared Error tensor(0.0033, device='cuda:0')
+Iter: 36, avg elbo: 10.4639, avg reconst: 12.6908, avg kl: 5.6067, mse: 0.002800, val_metric: 0.003276
+Iter: 37, avg elbo: 10.4468, avg reconst: 12.7691, avg kl: 5.6232, mse: 0.002779, val_metric: 0.003279
+Iter: 38, avg elbo: 10.1931, avg reconst: 11.8947, avg kl: 5.5462, mse: 0.002625, val_metric: 0.003315
+Saving the model at epoch 39
+Iter: 39, avg elbo: 9.9736, avg reconst: 11.8302, avg kl: 5.4802, mse: 0.002612, val_metric: 0.003103
+Iter: 40, avg elbo: 10.1512, avg reconst: 12.1319, avg kl: 5.4113, mse: 0.002680, val_metric: 0.003149
+Test Mean Squared Error tensor(0.0031, device='cuda:0')
+Saving the model at epoch 41
+Iter: 41, avg elbo: 9.9024, avg reconst: 11.9867, avg kl: 5.3210, mse: 0.002608, val_metric: 0.003004
+Iter: 42, avg elbo: 9.8121, avg reconst: 11.7522, avg kl: 5.2914, mse: 0.002556, val_metric: 0.003148
+Saving the model at epoch 43
+Iter: 43, avg elbo: 9.6911, avg reconst: 11.7383, avg kl: 5.2763, mse: 0.002596, val_metric: 0.002920
+Iter: 44, avg elbo: 9.9397, avg reconst: 12.1543, avg kl: 5.1937, mse: 0.002631, val_metric: 0.003084
+Iter: 45, avg elbo: 9.5108, avg reconst: 11.7507, avg kl: 5.2346, mse: 0.002521, val_metric: 0.003259
+Test Mean Squared Error tensor(0.0032, device='cuda:0')
+Iter: 46, avg elbo: 9.5638, avg reconst: 11.6157, avg kl: 5.1251, mse: 0.002505, val_metric: 0.002963
+Saving the model at epoch 47
+Iter: 47, avg elbo: 9.3176, avg reconst: 11.1327, avg kl: 5.1161, mse: 0.002443, val_metric: 0.002905
+Iter: 48, avg elbo: 9.1751, avg reconst: 11.0319, avg kl: 5.0305, mse: 0.002419, val_metric: 0.002910
+Saving the model at epoch 49
+Iter: 49, avg elbo: 9.1383, avg reconst: 11.2315, avg kl: 5.0143, mse: 0.002408, val_metric: 0.002790
+Iter: 50, avg elbo: 9.0094, avg reconst: 10.8025, avg kl: 4.9027, mse: 0.002396, val_metric: 0.003016
+Test Mean Squared Error tensor(0.0031, device='cuda:0')
+Saving the model at epoch 51
+Iter: 51, avg elbo: 8.8807, avg reconst: 10.6340, avg kl: 4.8818, mse: 0.002335, val_metric: 0.002785
+Saving the model at epoch 52
+Iter: 52, avg elbo: 8.7348, avg reconst: 10.4462, avg kl: 4.8004, mse: 0.002349, val_metric: 0.002768
+Iter: 53, avg elbo: 8.7535, avg reconst: 10.7730, avg kl: 4.7699, mse: 0.002361, val_metric: 0.003173
+Saving the model at epoch 54
+Iter: 54, avg elbo: 8.6730, avg reconst: 10.4228, avg kl: 4.6373, mse: 0.002304, val_metric: 0.002755
+Iter: 55, avg elbo: 8.5945, avg reconst: 10.2913, avg kl: 4.5995, mse: 0.002283, val_metric: 0.003029
+Test Mean Squared Error tensor(0.0032, device='cuda:0')
+Iter: 56, avg elbo: 8.4689, avg reconst: 10.1913, avg kl: 4.6412, mse: 0.002264, val_metric: 0.002814
+Iter: 57, avg elbo: 8.3501, avg reconst: 9.9901, avg kl: 4.5848, mse: 0.002257, val_metric: 0.002804
+Iter: 58, avg elbo: 8.3389, avg reconst: 10.1911, avg kl: 4.5290, mse: 0.002258, val_metric: 0.002803
+Iter: 59, avg elbo: 8.2560, avg reconst: 9.9715, avg kl: 4.4462, mse: 0.002241, val_metric: 0.003230
+Iter: 60, avg elbo: 8.0578, avg reconst: 9.7903, avg kl: 4.4515, mse: 0.002193, val_metric: 0.003994
+Test Mean Squared Error tensor(0.0039, device='cuda:0')
+Iter: 61, avg elbo: 8.0736, avg reconst: 10.2060, avg kl: 4.3131, mse: 0.002235, val_metric: 0.003004
+Iter: 62, avg elbo: 8.2245, avg reconst: 10.0017, avg kl: 4.4077, mse: 0.002209, val_metric: 0.002867
+Iter: 63, avg elbo: 8.2541, avg reconst: 10.0821, avg kl: 4.2893, mse: 0.002218, val_metric: 0.003351
+Iter: 64, avg elbo: 8.0363, avg reconst: 9.9386, avg kl: 4.3279, mse: 0.002167, val_metric: 0.003163
+Saving the model at epoch 65
+Iter: 65, avg elbo: 8.2119, avg reconst: 9.8909, avg kl: 4.2562, mse: 0.002196, val_metric: 0.002681
+Test Mean Squared Error tensor(0.0027, device='cuda:0')
+Iter: 66, avg elbo: 7.9230, avg reconst: 9.4872, avg kl: 4.2724, mse: 0.002086, val_metric: 0.002891
+Iter: 67, avg elbo: 7.9302, avg reconst: 9.5687, avg kl: 4.2150, mse: 0.002115, val_metric: 0.002971
+Iter: 68, avg elbo: 8.0361, avg reconst: 9.6512, avg kl: 4.2418, mse: 0.002126, val_metric: 0.003092
+Iter: 69, avg elbo: 7.9350, avg reconst: 9.5120, avg kl: 4.1579, mse: 0.002086, val_metric: 0.002976
+Iter: 70, avg elbo: 7.8121, avg reconst: 9.3919, avg kl: 4.1860, mse: 0.002047, val_metric: 0.003302
+Test Mean Squared Error tensor(0.0032, device='cuda:0')
+Iter: 71, avg elbo: 7.7206, avg reconst: 9.4780, avg kl: 4.0725, mse: 0.002063, val_metric: 0.002885
+Iter: 72, avg elbo: 7.8510, avg reconst: 9.6989, avg kl: 4.0278, mse: 0.002135, val_metric: 0.004129
+Iter: 73, avg elbo: 7.9374, avg reconst: 9.6714, avg kl: 4.0831, mse: 0.002094, val_metric: 0.003309
+Iter: 74, avg elbo: 7.5819, avg reconst: 8.9697, avg kl: 4.0329, mse: 0.001972, val_metric: 0.003028
+Iter: 75, avg elbo: 7.8729, avg reconst: 9.7777, avg kl: 3.9887, mse: 0.002087, val_metric: 0.003204
+Test Mean Squared Error tensor(0.0032, device='cuda:0')
+Iter: 76, avg elbo: 7.6883, avg reconst: 9.2137, avg kl: 4.0512, mse: 0.001990, val_metric: 0.002732
+Iter: 77, avg elbo: 7.6209, avg reconst: 9.1691, avg kl: 3.9470, mse: 0.002003, val_metric: 0.003784
+Iter: 78, avg elbo: 7.7288, avg reconst: 9.0680, avg kl: 3.9700, mse: 0.002013, val_metric: 0.003279
+Iter: 79, avg elbo: 7.7984, avg reconst: 9.4707, avg kl: 3.8730, mse: 0.002069, val_metric: 0.003535
+Iter: 80, avg elbo: 7.6254, avg reconst: 9.1496, avg kl: 3.9384, mse: 0.001978, val_metric: 0.002981
+Test Mean Squared Error tensor(0.0031, device='cuda:0')
+Iter: 81, avg elbo: 7.6190, avg reconst: 8.9290, avg kl: 3.8960, mse: 0.002003, val_metric: 0.003518
+Iter: 82, avg elbo: 7.7298, avg reconst: 9.3729, avg kl: 3.8758, mse: 0.002022, val_metric: 0.003255
+Iter: 83, avg elbo: 7.4538, avg reconst: 8.6492, avg kl: 3.8184, mse: 0.001924, val_metric: 0.003469
+Iter: 84, avg elbo: 7.6238, avg reconst: 8.9960, avg kl: 3.8284, mse: 0.001956, val_metric: 0.003105
+Iter: 85, avg elbo: 7.5645, avg reconst: 8.8087, avg kl: 3.8466, mse: 0.001956, val_metric: 0.003320
+Test Mean Squared Error tensor(0.0036, device='cuda:0')
+Iter: 86, avg elbo: 7.4422, avg reconst: 8.6345, avg kl: 3.8314, mse: 0.001917, val_metric: 0.003300
+Iter: 87, avg elbo: 7.4180, avg reconst: 8.3574, avg kl: 3.7893, mse: 0.001905, val_metric: 0.003112
+Iter: 88, avg elbo: 7.5126, avg reconst: 8.5756, avg kl: 3.7568, mse: 0.001961, val_metric: 0.003647
+Iter: 89, avg elbo: 7.5063, avg reconst: 8.6639, avg kl: 3.7540, mse: 0.001931, val_metric: 0.003546
+Iter: 90, avg elbo: 7.5083, avg reconst: 8.7769, avg kl: 3.7004, mse: 0.001954, val_metric: 0.003412
+Test Mean Squared Error tensor(0.0038, device='cuda:0')
+Iter: 91, avg elbo: 7.4541, avg reconst: 8.7793, avg kl: 3.7338, mse: 0.001953, val_metric: 0.004607
+Iter: 92, avg elbo: 7.5307, avg reconst: 8.6412, avg kl: 3.7104, mse: 0.001918, val_metric: 0.003274
+Iter: 93, avg elbo: 7.2487, avg reconst: 8.2210, avg kl: 3.6693, mse: 0.001859, val_metric: 0.003788
+Iter: 94, avg elbo: 7.5317, avg reconst: 8.5457, avg kl: 3.6783, mse: 0.001938, val_metric: 0.003518
+Iter: 95, avg elbo: 7.7015, avg reconst: 8.9987, avg kl: 3.6609, mse: 0.001953, val_metric: 0.003372
+Test Mean Squared Error tensor(0.0038, device='cuda:0')
+Iter: 96, avg elbo: 7.3381, avg reconst: 8.4992, avg kl: 3.6399, mse: 0.001869, val_metric: 0.004929
+Iter: 97, avg elbo: 7.3543, avg reconst: 8.3877, avg kl: 3.6326, mse: 0.001901, val_metric: 0.003807
+Iter: 98, avg elbo: 7.2180, avg reconst: 8.5105, avg kl: 3.5805, mse: 0.001869, val_metric: 0.003153
+Iter: 99, avg elbo: 7.4204, avg reconst: 8.4423, avg kl: 3.5672, mse: 0.001881, val_metric: 0.003681
+Iter: 100, avg elbo: 7.3486, avg reconst: 8.5625, avg kl: 3.5846, mse: 0.001879, val_metric: 0.003847
+Test Mean Squared Error tensor(0.0043, device='cuda:0')
+Iter: 101, avg elbo: 7.3083, avg reconst: 8.3527, avg kl: 3.5665, mse: 0.001862, val_metric: 0.003821
+Iter: 102, avg elbo: 7.5248, avg reconst: 8.4988, avg kl: 3.5313, mse: 0.001888, val_metric: 0.003536
+Iter: 103, avg elbo: 7.1508, avg reconst: 7.8304, avg kl: 3.5106, mse: 0.001782, val_metric: 0.003116
+Iter: 104, avg elbo: 7.2562, avg reconst: 8.0989, avg kl: 3.4990, mse: 0.001826, val_metric: 0.004368
+Iter: 105, avg elbo: 7.3318, avg reconst: 8.4743, avg kl: 3.4557, mse: 0.001858, val_metric: 0.003619
+Test Mean Squared Error tensor(0.0038, device='cuda:0')
+Iter: 106, avg elbo: 7.2869, avg reconst: 8.2250, avg kl: 3.4382, mse: 0.001836, val_metric: 0.003375
+Iter: 107, avg elbo: 7.3666, avg reconst: 8.2034, avg kl: 3.4344, mse: 0.001844, val_metric: 0.003985
+Iter: 108, avg elbo: 7.1617, avg reconst: 7.9046, avg kl: 3.4580, mse: 0.001784, val_metric: 0.003567
+Iter: 109, avg elbo: 7.1739, avg reconst: 7.9732, avg kl: 3.4277, mse: 0.001813, val_metric: 0.003997
+Iter: 110, avg elbo: 7.2544, avg reconst: 8.1629, avg kl: 3.4029, mse: 0.001817, val_metric: 0.002987
+Test Mean Squared Error tensor(0.0036, device='cuda:0')
+Iter: 111, avg elbo: 7.3055, avg reconst: 8.2851, avg kl: 3.3919, mse: 0.001840, val_metric: 0.004007
+Iter: 112, avg elbo: 7.1014, avg reconst: 7.7687, avg kl: 3.3717, mse: 0.001769, val_metric: 0.003143
+Iter: 113, avg elbo: 7.1228, avg reconst: 7.7696, avg kl: 3.3646, mse: 0.001811, val_metric: 0.003671
+Iter: 114, avg elbo: 7.2447, avg reconst: 8.3507, avg kl: 3.3573, mse: 0.001833, val_metric: 0.003786
+Iter: 115, avg elbo: 7.3503, avg reconst: 8.6195, avg kl: 3.3237, mse: 0.001873, val_metric: 0.003869
+Test Mean Squared Error tensor(0.0048, device='cuda:0')
+Iter: 116, avg elbo: 7.0098, avg reconst: 7.7571, avg kl: 3.3294, mse: 0.001740, val_metric: 0.003370
+Iter: 117, avg elbo: 7.1513, avg reconst: 7.8385, avg kl: 3.3055, mse: 0.001778, val_metric: 0.003544
+Iter: 118, avg elbo: 7.0643, avg reconst: 7.8880, avg kl: 3.2858, mse: 0.001815, val_metric: 0.003478
+Iter: 119, avg elbo: 7.0255, avg reconst: 8.0651, avg kl: 3.2666, mse: 0.001781, val_metric: 0.004269
+Iter: 120, avg elbo: 7.0287, avg reconst: 8.0540, avg kl: 3.2593, mse: 0.001818, val_metric: 0.003518
+Test Mean Squared Error tensor(0.0042, device='cuda:0')
+Iter: 121, avg elbo: 7.0522, avg reconst: 8.1374, avg kl: 3.2556, mse: 0.001788, val_metric: 0.003628
+Iter: 122, avg elbo: 7.0582, avg reconst: 7.8389, avg kl: 3.2520, mse: 0.001796, val_metric: 0.003193
+Iter: 123, avg elbo: 7.0295, avg reconst: 7.6959, avg kl: 3.2295, mse: 0.001785, val_metric: 0.003741
+Iter: 124, avg elbo: 6.9717, avg reconst: 7.7304, avg kl: 3.1820, mse: 0.001769, val_metric: 0.003156
+Iter: 125, avg elbo: 6.8992, avg reconst: 7.5224, avg kl: 3.2036, mse: 0.001766, val_metric: 0.005221
+Test Mean Squared Error tensor(0.0060, device='cuda:0')
+Iter: 126, avg elbo: 6.9958, avg reconst: 7.5790, avg kl: 3.1758, mse: 0.001775, val_metric: 0.003880
+Iter: 127, avg elbo: 7.0389, avg reconst: 7.5800, avg kl: 3.1653, mse: 0.001736, val_metric: 0.003626
+Iter: 128, avg elbo: 6.9870, avg reconst: 7.7211, avg kl: 3.1616, mse: 0.001738, val_metric: 0.003331
+Iter: 129, avg elbo: 7.0999, avg reconst: 7.9155, avg kl: 3.1206, mse: 0.001790, val_metric: 0.002919
+Iter: 130, avg elbo: 6.9311, avg reconst: 7.5932, avg kl: 3.1329, mse: 0.001698, val_metric: 0.003418
+Test Mean Squared Error tensor(0.0042, device='cuda:0')
+Iter: 131, avg elbo: 6.8127, avg reconst: 7.2511, avg kl: 3.1386, mse: 0.001706, val_metric: 0.003536
+Iter: 132, avg elbo: 6.8368, avg reconst: 7.3582, avg kl: 3.0990, mse: 0.001728, val_metric: 0.003248
+Iter: 133, avg elbo: 6.9906, avg reconst: 7.6414, avg kl: 3.1041, mse: 0.001759, val_metric: 0.003824
+Iter: 134, avg elbo: 6.8458, avg reconst: 7.6559, avg kl: 3.0795, mse: 0.001715, val_metric: 0.003471
+Iter: 135, avg elbo: 6.8447, avg reconst: 7.5158, avg kl: 3.0735, mse: 0.001718, val_metric: 0.003812
+Test Mean Squared Error tensor(0.0049, device='cuda:0')
+Iter: 136, avg elbo: 6.8165, avg reconst: 7.4451, avg kl: 3.0691, mse: 0.001706, val_metric: 0.002864
+Iter: 137, avg elbo: 6.7939, avg reconst: 7.2933, avg kl: 3.0815, mse: 0.001701, val_metric: 0.003795
+Iter: 138, avg elbo: 6.8338, avg reconst: 7.3039, avg kl: 3.0611, mse: 0.001700, val_metric: 0.003584
+Iter: 139, avg elbo: 6.8287, avg reconst: 7.5867, avg kl: 3.0273, mse: 0.001698, val_metric: 0.002726
+Iter: 140, avg elbo: 6.6208, avg reconst: 7.0280, avg kl: 3.0638, mse: 0.001661, val_metric: 0.003118
+Test Mean Squared Error tensor(0.0037, device='cuda:0')
+Iter: 141, avg elbo: 6.8311, avg reconst: 7.1997, avg kl: 3.0692, mse: 0.001696, val_metric: 0.002915
+Iter: 142, avg elbo: 6.7446, avg reconst: 7.1719, avg kl: 3.0512, mse: 0.001698, val_metric: 0.003118
+Saving the model at epoch 143
+Iter: 143, avg elbo: 6.8024, avg reconst: 7.2206, avg kl: 3.0333, mse: 0.001686, val_metric: 0.002657
+Saving the model at epoch 144
+Iter: 144, avg elbo: 6.8156, avg reconst: 7.3430, avg kl: 3.0223, mse: 0.001708, val_metric: 0.002632
+Iter: 145, avg elbo: 6.6572, avg reconst: 7.2379, avg kl: 3.0086, mse: 0.001639, val_metric: 0.003255
+Test Mean Squared Error tensor(0.0039, device='cuda:0')
+Iter: 146, avg elbo: 6.8001, avg reconst: 7.3010, avg kl: 2.9553, mse: 0.001711, val_metric: 0.003230
+Iter: 147, avg elbo: 6.6774, avg reconst: 7.0230, avg kl: 2.9567, mse: 0.001673, val_metric: 0.003085
+Iter: 148, avg elbo: 6.7022, avg reconst: 7.0463, avg kl: 2.9614, mse: 0.001658, val_metric: 0.003121
+Iter: 149, avg elbo: 6.6748, avg reconst: 7.1179, avg kl: 2.9561, mse: 0.001660, val_metric: 0.002755
+Iter: 150, avg elbo: 6.6189, avg reconst: 7.0063, avg kl: 2.9302, mse: 0.001648, val_metric: 0.003115
+Test Mean Squared Error tensor(0.0034, device='cuda:0')
+Iter: 151, avg elbo: 6.7364, avg reconst: 7.2739, avg kl: 2.9384, mse: 0.001679, val_metric: 0.003287
+Iter: 152, avg elbo: 6.6271, avg reconst: 7.0682, avg kl: 2.9185, mse: 0.001665, val_metric: 0.003032
+Iter: 153, avg elbo: 6.6980, avg reconst: 7.0172, avg kl: 2.9311, mse: 0.001623, val_metric: 0.004210
+Iter: 154, avg elbo: 6.6600, avg reconst: 7.0263, avg kl: 2.9095, mse: 0.001640, val_metric: 0.004579
+Iter: 155, avg elbo: 6.6655, avg reconst: 7.1606, avg kl: 2.8917, mse: 0.001641, val_metric: 0.003213
+Test Mean Squared Error tensor(0.0038, device='cuda:0')
+Iter: 156, avg elbo: 6.5139, avg reconst: 6.8440, avg kl: 2.9288, mse: 0.001613, val_metric: 0.002699
+Iter: 157, avg elbo: 6.5751, avg reconst: 7.0933, avg kl: 2.9165, mse: 0.001609, val_metric: 0.002635
+Iter: 158, avg elbo: 6.6246, avg reconst: 6.9523, avg kl: 2.9147, mse: 0.001635, val_metric: 0.002767
+Iter: 159, avg elbo: 6.6629, avg reconst: 6.8606, avg kl: 2.9189, mse: 0.001633, val_metric: 0.003152
+Iter: 160, avg elbo: 6.5749, avg reconst: 6.9254, avg kl: 2.8864, mse: 0.001637, val_metric: 0.002671
+Test Mean Squared Error tensor(0.0033, device='cuda:0')
+Iter: 161, avg elbo: 6.5824, avg reconst: 6.8558, avg kl: 2.8710, mse: 0.001640, val_metric: 0.002917
+Iter: 162, avg elbo: 6.4705, avg reconst: 6.7287, avg kl: 2.8781, mse: 0.001582, val_metric: 0.004370
+Iter: 163, avg elbo: 6.4481, avg reconst: 6.7280, avg kl: 2.8538, mse: 0.001599, val_metric: 0.002806
+Iter: 164, avg elbo: 6.4292, avg reconst: 6.6628, avg kl: 2.8464, mse: 0.001614, val_metric: 0.004052
+Iter: 165, avg elbo: 6.5929, avg reconst: 6.9311, avg kl: 2.8188, mse: 0.001664, val_metric: 0.003285
+Test Mean Squared Error tensor(0.0043, device='cuda:0')
+Iter: 166, avg elbo: 6.4644, avg reconst: 6.9342, avg kl: 2.7962, mse: 0.001600, val_metric: 0.003365
+Iter: 167, avg elbo: 6.2833, avg reconst: 6.5176, avg kl: 2.8103, mse: 0.001574, val_metric: 0.003146
+Iter: 168, avg elbo: 6.4643, avg reconst: 6.7712, avg kl: 2.8004, mse: 0.001599, val_metric: 0.003488
+Iter: 169, avg elbo: 6.4929, avg reconst: 6.8088, avg kl: 2.8065, mse: 0.001585, val_metric: 0.002743
+Iter: 170, avg elbo: 6.3942, avg reconst: 6.7019, avg kl: 2.7876, mse: 0.001608, val_metric: 0.002865
+Test Mean Squared Error tensor(0.0031, device='cuda:0')
+Iter: 171, avg elbo: 6.2896, avg reconst: 6.4803, avg kl: 2.7904, mse: 0.001545, val_metric: 0.002781
+Saving the model at epoch 172
+Iter: 172, avg elbo: 6.4884, avg reconst: 6.8510, avg kl: 2.7621, mse: 0.001605, val_metric: 0.002602
+Iter: 173, avg elbo: 6.3696, avg reconst: 6.6507, avg kl: 2.7819, mse: 0.001604, val_metric: 0.002872
+Iter: 174, avg elbo: 6.2063, avg reconst: 6.3836, avg kl: 2.7714, mse: 0.001515, val_metric: 0.002797
+Iter: 175, avg elbo: 6.3350, avg reconst: 6.7134, avg kl: 2.7551, mse: 0.001576, val_metric: 0.002723
+Test Mean Squared Error tensor(0.0034, device='cuda:0')
+Iter: 176, avg elbo: 6.3313, avg reconst: 6.5305, avg kl: 2.7737, mse: 0.001579, val_metric: 0.002930
+Saving the model at epoch 177
+Iter: 177, avg elbo: 6.7324, avg reconst: 7.1863, avg kl: 2.7197, mse: 0.001664, val_metric: 0.002514
+Iter: 178, avg elbo: 6.1590, avg reconst: 6.3400, avg kl: 2.7339, mse: 0.001528, val_metric: 0.002612
+Iter: 179, avg elbo: 6.2814, avg reconst: 6.4568, avg kl: 2.7686, mse: 0.001544, val_metric: 0.002564
+Iter: 180, avg elbo: 6.2317, avg reconst: 6.2685, avg kl: 2.7464, mse: 0.001550, val_metric: 0.002768
+Test Mean Squared Error tensor(0.0034, device='cuda:0')
+Iter: 181, avg elbo: 6.2456, avg reconst: 6.4339, avg kl: 2.7267, mse: 0.001544, val_metric: 0.002558
+Saving the model at epoch 182
+Iter: 182, avg elbo: 6.2359, avg reconst: 6.4274, avg kl: 2.7339, mse: 0.001543, val_metric: 0.002362
+Iter: 183, avg elbo: 6.2444, avg reconst: 6.4499, avg kl: 2.7254, mse: 0.001540, val_metric: 0.002730
+Iter: 184, avg elbo: 6.1614, avg reconst: 6.2736, avg kl: 2.7134, mse: 0.001510, val_metric: 0.002451
+Iter: 185, avg elbo: 6.1328, avg reconst: 6.2682, avg kl: 2.7018, mse: 0.001515, val_metric: 0.002381
+Test Mean Squared Error tensor(0.0035, device='cuda:0')
+Iter: 186, avg elbo: 6.1331, avg reconst: 6.1574, avg kl: 2.7147, mse: 0.001506, val_metric: 0.002611
+Iter: 187, avg elbo: 6.1560, avg reconst: 6.3050, avg kl: 2.6753, mse: 0.001525, val_metric: 0.002952
+Iter: 188, avg elbo: 6.2074, avg reconst: 6.3613, avg kl: 2.6974, mse: 0.001560, val_metric: 0.002671
+Iter: 189, avg elbo: 6.1168, avg reconst: 6.2301, avg kl: 2.6989, mse: 0.001515, val_metric: 0.002462
+Iter: 190, avg elbo: 6.0444, avg reconst: 6.0832, avg kl: 2.6983, mse: 0.001489, val_metric: 0.002534
+Test Mean Squared Error tensor(0.0029, device='cuda:0')
+Iter: 191, avg elbo: 6.1847, avg reconst: 6.2882, avg kl: 2.6680, mse: 0.001529, val_metric: 0.002502
+Iter: 192, avg elbo: 6.0444, avg reconst: 6.0531, avg kl: 2.6833, mse: 0.001467, val_metric: 0.002403
+Saving the model at epoch 193
+Iter: 193, avg elbo: 6.0442, avg reconst: 6.1194, avg kl: 2.6769, mse: 0.001505, val_metric: 0.002324
+Iter: 194, avg elbo: 5.9913, avg reconst: 6.0266, avg kl: 2.6785, mse: 0.001475, val_metric: 0.002530
+Iter: 195, avg elbo: 6.2503, avg reconst: 6.5152, avg kl: 2.6624, mse: 0.001569, val_metric: 0.002555
+Test Mean Squared Error tensor(0.0031, device='cuda:0')
+Iter: 196, avg elbo: 6.0151, avg reconst: 6.0915, avg kl: 2.6708, mse: 0.001524, val_metric: 0.002975
+Iter: 197, avg elbo: 6.0392, avg reconst: 6.2128, avg kl: 2.6472, mse: 0.001502, val_metric: 0.002535
+Saving the model at epoch 198
+Iter: 198, avg elbo: 6.0384, avg reconst: 6.1128, avg kl: 2.6694, mse: 0.001495, val_metric: 0.002162
+Iter: 199, avg elbo: 5.9224, avg reconst: 5.8664, avg kl: 2.6585, mse: 0.001479, val_metric: 0.002396
+Iter: 200, avg elbo: 6.0050, avg reconst: 5.9095, avg kl: 2.6710, mse: 0.001464, val_metric: 0.002200
+Test Mean Squared Error tensor(0.0030, device='cuda:0')
+Iter: 201, avg elbo: 6.0602, avg reconst: 6.1697, avg kl: 2.6465, mse: 0.001497, val_metric: 0.002298
+Iter: 202, avg elbo: 6.1357, avg reconst: 6.3624, avg kl: 2.6227, mse: 0.001540, val_metric: 0.002292
+Iter: 203, avg elbo: 5.9725, avg reconst: 5.9859, avg kl: 2.6584, mse: 0.001482, val_metric: 0.003291
+Iter: 204, avg elbo: 6.0803, avg reconst: 6.1579, avg kl: 2.6318, mse: 0.001506, val_metric: 0.002224
+Iter: 205, avg elbo: 5.8351, avg reconst: 5.8097, avg kl: 2.6436, mse: 0.001438, val_metric: 0.002367
+Test Mean Squared Error tensor(0.0027, device='cuda:0')
+Iter: 206, avg elbo: 5.9028, avg reconst: 5.9732, avg kl: 2.6206, mse: 0.001453, val_metric: 0.002556
+Iter: 207, avg elbo: 5.8649, avg reconst: 5.7775, avg kl: 2.6459, mse: 0.001453, val_metric: 0.002921
+Iter: 208, avg elbo: 5.8385, avg reconst: 5.9145, avg kl: 2.6102, mse: 0.001461, val_metric: 0.002618
+Iter: 209, avg elbo: 5.9183, avg reconst: 5.8242, avg kl: 2.6367, mse: 0.001465, val_metric: 0.002298
+Saving the model at epoch 210
+Iter: 210, avg elbo: 5.9102, avg reconst: 5.9243, avg kl: 2.6070, mse: 0.001474, val_metric: 0.002076
+Test Mean Squared Error tensor(0.0025, device='cuda:0')
+Saving the model at epoch 211
+Iter: 211, avg elbo: 5.8766, avg reconst: 5.8752, avg kl: 2.6117, mse: 0.001480, val_metric: 0.002011
+Iter: 212, avg elbo: 5.8398, avg reconst: 5.8360, avg kl: 2.6040, mse: 0.001436, val_metric: 0.002631
+Saving the model at epoch 213
+Iter: 213, avg elbo: 5.7992, avg reconst: 5.7310, avg kl: 2.6194, mse: 0.001454, val_metric: 0.001990
+Iter: 214, avg elbo: 5.8404, avg reconst: 5.7947, avg kl: 2.6089, mse: 0.001450, val_metric: 0.002754
+Iter: 215, avg elbo: 5.9233, avg reconst: 5.9606, avg kl: 2.5896, mse: 0.001470, val_metric: 0.002080
+Test Mean Squared Error tensor(0.0024, device='cuda:0')
+Iter: 216, avg elbo: 5.7781, avg reconst: 5.7272, avg kl: 2.5973, mse: 0.001421, val_metric: 0.002074
+Iter: 217, avg elbo: 5.7908, avg reconst: 5.6504, avg kl: 2.6035, mse: 0.001437, val_metric: 0.002106
+Iter: 218, avg elbo: 5.8444, avg reconst: 5.7907, avg kl: 2.5718, mse: 0.001446, val_metric: 0.002000
+Iter: 219, avg elbo: 5.7505, avg reconst: 5.6692, avg kl: 2.5891, mse: 0.001413, val_metric: 0.002429
+Saving the model at epoch 220
+Iter: 220, avg elbo: 5.7737, avg reconst: 5.6611, avg kl: 2.5798, mse: 0.001424, val_metric: 0.001928
+Test Mean Squared Error tensor(0.0029, device='cuda:0')
+Iter: 221, avg elbo: 5.6469, avg reconst: 5.5984, avg kl: 2.5866, mse: 0.001406, val_metric: 0.002011
+Iter: 222, avg elbo: 5.8187, avg reconst: 5.8476, avg kl: 2.5680, mse: 0.001460, val_metric: 0.002182
+Iter: 223, avg elbo: 5.6551, avg reconst: 5.5705, avg kl: 2.5823, mse: 0.001379, val_metric: 0.002090
+Iter: 224, avg elbo: 5.7149, avg reconst: 5.5608, avg kl: 2.5728, mse: 0.001425, val_metric: 0.002216
+Iter: 225, avg elbo: 5.7132, avg reconst: 5.6772, avg kl: 2.5626, mse: 0.001425, val_metric: 0.002175
+Test Mean Squared Error tensor(0.0029, device='cuda:0')
+Iter: 226, avg elbo: 5.6343, avg reconst: 5.4702, avg kl: 2.5591, mse: 0.001382, val_metric: 0.002173
+Iter: 227, avg elbo: 5.6347, avg reconst: 5.4816, avg kl: 2.5550, mse: 0.001396, val_metric: 0.002076
+Iter: 228, avg elbo: 5.6923, avg reconst: 5.6751, avg kl: 2.5415, mse: 0.001399, val_metric: 0.001998
+Iter: 229, avg elbo: 5.6998, avg reconst: 5.6085, avg kl: 2.5659, mse: 0.001423, val_metric: 0.002186
+Iter: 230, avg elbo: 5.6246, avg reconst: 5.5639, avg kl: 2.5456, mse: 0.001408, val_metric: 0.002210
+Test Mean Squared Error tensor(0.0030, device='cuda:0')
+Iter: 231, avg elbo: 5.6788, avg reconst: 5.5461, avg kl: 2.5617, mse: 0.001382, val_metric: 0.001983
+Iter: 232, avg elbo: 5.5673, avg reconst: 5.3440, avg kl: 2.5470, mse: 0.001386, val_metric: 0.001938
+Iter: 233, avg elbo: 5.6920, avg reconst: 5.6123, avg kl: 2.5218, mse: 0.001412, val_metric: 0.002002
+Iter: 234, avg elbo: 5.5454, avg reconst: 5.3628, avg kl: 2.5412, mse: 0.001382, val_metric: 0.001965
+Iter: 235, avg elbo: 5.5863, avg reconst: 5.4464, avg kl: 2.5296, mse: 0.001391, val_metric: 0.001963
+Test Mean Squared Error tensor(0.0023, device='cuda:0')
+Iter: 236, avg elbo: 5.5556, avg reconst: 5.3496, avg kl: 2.5409, mse: 0.001381, val_metric: 0.002011
+Saving the model at epoch 237
+Iter: 237, avg elbo: 5.5703, avg reconst: 5.5279, avg kl: 2.5238, mse: 0.001413, val_metric: 0.001896
+Iter: 238, avg elbo: 5.5410, avg reconst: 5.4755, avg kl: 2.5304, mse: 0.001403, val_metric: 0.001962
+Iter: 239, avg elbo: 5.4738, avg reconst: 5.3407, avg kl: 2.5147, mse: 0.001355, val_metric: 0.001989
+Iter: 240, avg elbo: 5.5906, avg reconst: 5.5622, avg kl: 2.5155, mse: 0.001408, val_metric: 0.002009
+Test Mean Squared Error tensor(0.0023, device='cuda:0')
+Saving the model at epoch 241
+Iter: 241, avg elbo: 5.4391, avg reconst: 5.2742, avg kl: 2.5107, mse: 0.001330, val_metric: 0.001853
+Iter: 242, avg elbo: 5.4848, avg reconst: 5.3177, avg kl: 2.5172, mse: 0.001346, val_metric: 0.001986
+Iter: 243, avg elbo: 5.4680, avg reconst: 5.3560, avg kl: 2.5045, mse: 0.001362, val_metric: 0.002025
+Iter: 244, avg elbo: 5.4670, avg reconst: 5.3350, avg kl: 2.4927, mse: 0.001362, val_metric: 0.001914
+Iter: 245, avg elbo: 5.3901, avg reconst: 5.1765, avg kl: 2.5208, mse: 0.001342, val_metric: 0.002004
+Test Mean Squared Error tensor(0.0022, device='cuda:0')
+Iter: 246, avg elbo: 5.4477, avg reconst: 5.2782, avg kl: 2.4961, mse: 0.001355, val_metric: 0.001927
+Iter: 247, avg elbo: 5.4313, avg reconst: 5.2217, avg kl: 2.5016, mse: 0.001342, val_metric: 0.001881
+Iter: 248, avg elbo: 5.3794, avg reconst: 5.1781, avg kl: 2.4945, mse: 0.001339, val_metric: 0.001862
+Saving the model at epoch 249
+Iter: 249, avg elbo: 5.3573, avg reconst: 5.1327, avg kl: 2.4942, mse: 0.001326, val_metric: 0.001839
+Iter: 250, avg elbo: 5.3558, avg reconst: 5.0649, avg kl: 2.5066, mse: 0.001333, val_metric: 0.001870
+Test Mean Squared Error tensor(0.0023, device='cuda:0')
+Iter: 251, avg elbo: 5.3785, avg reconst: 5.1052, avg kl: 2.4878, mse: 0.001327, val_metric: 0.001933
+Iter: 252, avg elbo: 5.4346, avg reconst: 5.2735, avg kl: 2.4690, mse: 0.001338, val_metric: 0.001913
+Iter: 253, avg elbo: 5.3318, avg reconst: 5.0316, avg kl: 2.4898, mse: 0.001328, val_metric: 0.001909
+Iter: 254, avg elbo: 5.3248, avg reconst: 5.0564, avg kl: 2.4920, mse: 0.001313, val_metric: 0.001928
+Iter: 255, avg elbo: 5.5165, avg reconst: 5.3884, avg kl: 2.4710, mse: 0.001372, val_metric: 0.001909
+Test Mean Squared Error tensor(0.0024, device='cuda:0')
+Saving the model at epoch 256
+Iter: 256, avg elbo: 5.2956, avg reconst: 4.9802, avg kl: 2.4923, mse: 0.001332, val_metric: 0.001753
+Iter: 257, avg elbo: 5.3421, avg reconst: 5.0047, avg kl: 2.5016, mse: 0.001324, val_metric: 0.001847
+Iter: 258, avg elbo: 5.3013, avg reconst: 5.0145, avg kl: 2.4734, mse: 0.001323, val_metric: 0.001906
+Iter: 259, avg elbo: 5.1634, avg reconst: 4.8183, avg kl: 2.4722, mse: 0.001283, val_metric: 0.001930
+Iter: 260, avg elbo: 5.3931, avg reconst: 5.1210, avg kl: 2.4545, mse: 0.001314, val_metric: 0.001850
+Test Mean Squared Error tensor(0.0021, device='cuda:0')
+Iter: 261, avg elbo: 5.2131, avg reconst: 4.9197, avg kl: 2.4631, mse: 0.001309, val_metric: 0.001768
+Iter: 262, avg elbo: 5.2164, avg reconst: 4.9728, avg kl: 2.4607, mse: 0.001299, val_metric: 0.001790
+Iter: 263, avg elbo: 5.1997, avg reconst: 4.9181, avg kl: 2.4356, mse: 0.001315, val_metric: 0.001836
+Iter: 264, avg elbo: 5.2568, avg reconst: 4.9484, avg kl: 2.4445, mse: 0.001303, val_metric: 0.002253
+Iter: 265, avg elbo: 5.2005, avg reconst: 4.8793, avg kl: 2.4523, mse: 0.001313, val_metric: 0.001831
+Test Mean Squared Error tensor(0.0020, device='cuda:0')
+Iter: 266, avg elbo: 5.2127, avg reconst: 4.9571, avg kl: 2.4583, mse: 0.001303, val_metric: 0.001926
+Iter: 267, avg elbo: 5.1684, avg reconst: 4.8576, avg kl: 2.4404, mse: 0.001291, val_metric: 0.001893
+Iter: 268, avg elbo: 5.2378, avg reconst: 5.0379, avg kl: 2.4291, mse: 0.001287, val_metric: 0.001902
+Iter: 269, avg elbo: 5.1451, avg reconst: 4.8487, avg kl: 2.4397, mse: 0.001276, val_metric: 0.001796
+Iter: 270, avg elbo: 5.1226, avg reconst: 4.7820, avg kl: 2.4487, mse: 0.001272, val_metric: 0.001757
+Test Mean Squared Error tensor(0.0021, device='cuda:0')
+Iter: 271, avg elbo: 5.1164, avg reconst: 4.7403, avg kl: 2.4335, mse: 0.001262, val_metric: 0.001853
+Iter: 272, avg elbo: 5.1052, avg reconst: 4.8604, avg kl: 2.4317, mse: 0.001282, val_metric: 0.001899
+Iter: 273, avg elbo: 5.1719, avg reconst: 4.8770, avg kl: 2.4242, mse: 0.001314, val_metric: 0.001868
+Saving the model at epoch 274
+Iter: 274, avg elbo: 5.0490, avg reconst: 4.6738, avg kl: 2.4255, mse: 0.001255, val_metric: 0.001708
+Iter: 275, avg elbo: 5.1204, avg reconst: 4.8056, avg kl: 2.4304, mse: 0.001274, val_metric: 0.001748
+Test Mean Squared Error tensor(0.0020, device='cuda:0')
+Iter: 276, avg elbo: 5.0617, avg reconst: 4.6560, avg kl: 2.4321, mse: 0.001264, val_metric: 0.001768
+Iter: 277, avg elbo: 5.0576, avg reconst: 4.6320, avg kl: 2.4389, mse: 0.001267, val_metric: 0.001778
+Iter: 278, avg elbo: 5.0739, avg reconst: 4.7379, avg kl: 2.4222, mse: 0.001267, val_metric: 0.001918
+Iter: 279, avg elbo: 4.9887, avg reconst: 4.6042, avg kl: 2.4141, mse: 0.001245, val_metric: 0.002010
+Iter: 280, avg elbo: 5.0966, avg reconst: 4.7890, avg kl: 2.4200, mse: 0.001272, val_metric: 0.001758
+Test Mean Squared Error tensor(0.0019, device='cuda:0')
+Saving the model at epoch 281
+Iter: 281, avg elbo: 5.0379, avg reconst: 4.5956, avg kl: 2.4145, mse: 0.001268, val_metric: 0.001688
+Iter: 282, avg elbo: 5.0917, avg reconst: 4.7890, avg kl: 2.3967, mse: 0.001279, val_metric: 0.001822
+Iter: 283, avg elbo: 5.0775, avg reconst: 4.6646, avg kl: 2.4086, mse: 0.001272, val_metric: 0.001849
+Iter: 284, avg elbo: 4.9584, avg reconst: 4.5985, avg kl: 2.4000, mse: 0.001248, val_metric: 0.001827
+Saving the model at epoch 285
+Iter: 285, avg elbo: 4.9610, avg reconst: 4.5595, avg kl: 2.4142, mse: 0.001246, val_metric: 0.001680
+Test Mean Squared Error tensor(0.0018, device='cuda:0')
+Iter: 286, avg elbo: 5.1672, avg reconst: 4.8653, avg kl: 2.3846, mse: 0.001298, val_metric: 0.001723
+Iter: 287, avg elbo: 4.8993, avg reconst: 4.4422, avg kl: 2.4051, mse: 0.001233, val_metric: 0.001789
+Iter: 288, avg elbo: 4.9801, avg reconst: 4.5602, avg kl: 2.4126, mse: 0.001243, val_metric: 0.001762
+Iter: 289, avg elbo: 4.8684, avg reconst: 4.3799, avg kl: 2.4147, mse: 0.001220, val_metric: 0.001705
+Iter: 290, avg elbo: 5.0821, avg reconst: 4.7136, avg kl: 2.3883, mse: 0.001267, val_metric: 0.001972
+Test Mean Squared Error tensor(0.0020, device='cuda:0')
+Iter: 291, avg elbo: 4.9038, avg reconst: 4.4132, avg kl: 2.3913, mse: 0.001211, val_metric: 0.001845
+Saving the model at epoch 292
+Iter: 292, avg elbo: 4.9466, avg reconst: 4.5629, avg kl: 2.3787, mse: 0.001237, val_metric: 0.001640
+Iter: 293, avg elbo: 4.8789, avg reconst: 4.4122, avg kl: 2.3901, mse: 0.001216, val_metric: 0.001702
+Iter: 294, avg elbo: 4.9565, avg reconst: 4.5718, avg kl: 2.3935, mse: 0.001248, val_metric: 0.001691
+Iter: 295, avg elbo: 4.8980, avg reconst: 4.4813, avg kl: 2.3874, mse: 0.001229, val_metric: 0.001641
+Test Mean Squared Error tensor(0.0018, device='cuda:0')
+Iter: 296, avg elbo: 4.8488, avg reconst: 4.3976, avg kl: 2.3869, mse: 0.001238, val_metric: 0.001704
+Iter: 297, avg elbo: 4.8923, avg reconst: 4.4206, avg kl: 2.3964, mse: 0.001239, val_metric: 0.001705
+Saving the model at epoch 298
+Iter: 298, avg elbo: 4.8619, avg reconst: 4.4490, avg kl: 2.3820, mse: 0.001215, val_metric: 0.001631
+Iter: 299, avg elbo: 4.9393, avg reconst: 4.5516, avg kl: 2.3796, mse: 0.001230, val_metric: 0.001733
+Iter: 300, avg elbo: 4.8582, avg reconst: 4.4854, avg kl: 2.3768, mse: 0.001211, val_metric: 0.001733
+Test Mean Squared Error tensor(0.0019, device='cuda:0')
+Time elapsed 1432.04 min
+
++------------------ Job Report: 2649545 (COMPLETED) -------------------+
+| Memory (RAM)  [#####               ] 25.9% (2.1 GB peak / 8 GB)      |
+| CPU           [############        ] 63.4% average                   |
+| Time          [---------->         ] 52.7% (1-01:17:47 / 2-00:00:00) |
+|                                                                      |
+| Lustre Filesystem:                                                   |
+|   No data available                                                  |
+|                                                                      |
+| Warnings:                                                            |
+|   - Too much memory requested                                        |
+|   - CPU usage is low                                                 |
+|   - Too much time requested                                          |
++----------------------------------------------------------------------+
