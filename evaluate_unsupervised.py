@@ -29,7 +29,7 @@ dim = 2
 seed = 42
 store_decoded_lcs = True
 # NOTE: Change the `SETTING` based on which dataset to evaluate the model on.
-SETTING = 'test'   # 'test', 'train', or 'val', or 'OOD_test'. The last option is for totally new custom data. See `OOD_evaluate_unsupervised_prepare_data.py`.
+SETTING = 'test'   # 'test', 'train', or 'val', or 'OOD_test', or 'test_ftransfer_ztf_2026_02_01_378646'. The second-last option is for totally new custom data. See `OOD_evaluate_unsupervised_prepare_data.py`. The last option is for the graph-based test.
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
 model_file_path = 'ftransfer_ztf_2025-05-31_430518_mtan_rnn_mtan_rnn_Jul27_298.h5'

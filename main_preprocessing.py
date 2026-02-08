@@ -6,10 +6,11 @@ import pandas as pd
 import torch
 from urllib.parse import unquote
 from utils import read_alert
-from prepare_data import prepare_data, get_tns_tde_alerts
+from prepare_data import prepare_data, get_tns_tde_alerts, prepare_data_graph_test
 from constants import agn_list, stars_list, sn_list, to_remove_objIds
 
-TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2025-05-31_430518'
+TOPIC_PATH = '/home/ygondhal/ftransfer_ztf_2025-05-31_430518'  # For generating data for the graph test: '/home/ygondhal/ftransfer_ztf_2026-02-01_378646'
+CUSTOM_TRAIN_TIMES = False  # Set to True when applying on totally new set of polled alerts than the one used for trainins/validation/testing
 
 """
 def f_custom_sn(row):
@@ -68,7 +69,10 @@ def preprocessing_alert_folders(topic_path):
         dir_ = raw_dir.split('/')[-1].split('finkclass=')[-1]
         if dir_ in agn_list:
             #shutil.move(raw_dir, AGN_DIR)  # NOTE: Now alerts are not transferred to a separate directory since that is less flexible when we want to assign custom_.. class not based on finkclass, e.g., tnsclass. Moving folders directly in this case is not possible.
-            df_alerts.finkclass.replace(unquote(dir_), 'custom_agn', inplace=True)
+            if not CUSTOM_TRAIN_TIMES:  # Because if CUSTOM_TRAIN_TIMES is True, then likely this script is being used for totally new data, in which case the below is not needed.
+                df_alerts.finkclass.replace(unquote(dir_), 'custom_agn', inplace=True)
+            else:
+                pass
             # shutil.rmtree(raw_dir)
         #elif dir_ in stars_list:
             #shutil.move(raw_dir, STARS_DIR)
@@ -91,15 +95,17 @@ def preprocessing_alert_folders(topic_path):
         #else:
         #    print(f'Folder {dir_} not in the alerts, skipping...')
 
-    # NOTE: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
-    def f(row):
-        return 'custom_sn' if row['tnsclass'] in sn_list else row['finkclass']
-     
-    df_alerts['finkclass'] = df_alerts.apply(lambda row: f(row), axis = 1)
+    if not CUSTOM_TRAIN_TIMES:  # Because if CUSTOM_TRAIN_TIMES is True, then likely this script is being used for totally new data, in which case the below may nnot be needed.
+        # NOTE: For SN, since custom_sn really is assigned based on TNS class, we do the below operation so that any alert not with either SN or SN candidate finkclass can still be added to custom_sn if it has one of the TNS SN classes.
+        def f(row):
+            return 'custom_sn' if row['tnsclass'] in sn_list else row['finkclass']
+         
+        df_alerts['finkclass'] = df_alerts.apply(lambda row: f(row), axis = 1)
     #df_alerts.loc[df_alerts.tnsclass.isin(sn_list), 'finkclass'] = 'custom_sn'
 
     # NOTE: The below condition must be true if only custom_agn, custom_sn, and Early SN Ia candidate are expected to be in the dataframe of alerts.
-    assert (len(df_alerts['finkclass'].unique()) == 3) and ('custom_agn' in df_alerts['finkclass'].unique()) and ('custom_sn' in df_alerts['finkclass'].unique()) and ('Early SN Ia candidate' in df_alerts['finkclass'].unique())
+    if not CUSTOM_TRAIN_TIMES:  # Because if CUSTOM_TRAIN_TIMES is True, then likely this script is being used for totally new data, in which case the below may not hold.
+        assert (len(df_alerts['finkclass'].unique()) == 3) and ('custom_agn' in df_alerts['finkclass'].unique()) and ('custom_sn' in df_alerts['finkclass'].unique()) and ('Early SN Ia candidate' in df_alerts['finkclass'].unique())
 
     print('finkclass value_counts after first processing...')
     print(df_alerts['finkclass'].value_counts())
@@ -137,7 +143,8 @@ def preprocessing_alert_folders(topic_path):
     # 2. For AGN dataset (assuming polling is done for all classes in agn_list, whether TNS or SIMBAD, whatever classes are available in the data transfer service online.
     #df_alerts = df_alerts[df_alerts['finkclass'] == 'custom_agn']
     # 3. For SN + AGN dataset
-    df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate') | (df_alerts['finkclass'] == 'custom_agn')]
+    if not CUSTOM_TRAIN_TIMES:  # Because if CUSTOM_TRAIN_TIMES is True, then likely this script is being used for totally new data, in which case the below is not needed.
+        df_alerts = df_alerts[(df_alerts['finkclass'] == 'custom_sn') | (df_alerts['finkclass'] == 'Early SN Ia candidate') | (df_alerts['finkclass'] == 'custom_agn')]
 
     # NOTE: The below condition can be used if one desires light curves that are not too sparse.
     ## Select those having >=10 points in the light curve and at least 4 points in each band.
@@ -180,26 +187,46 @@ def preprocessing_alert_folders(topic_path):
 df_alerts = preprocessing_alert_folders(TOPIC_PATH)
 df_alerts.to_parquet(f'alerts_processed_{TOPIC_PATH.split("/")[-1].replace("-", "_")}'+'.parquet')
 
-data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True)
+# NOTE: Set custom_train_min_time and custom_train_max_time to not be None if this script is used for preparing data for application on totally new set of polled alerts since in that case, the min/max times from the training must be used.
+if CUSTOM_TRAIN_TIMES:
+    train_val_test_min_max_times = np.load('train_val_test_min_max_times.npy')
+    train_min_time, train_max_time = train_val_test_min_max_times[0], train_val_test_min_max_times[1]
+    data_obj = prepare_data_graph_test(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True, custom_train_min_time=train_min_time, custom_train_max_time=train_max_time)
+else:
+    data_obj = prepare_data(df_alerts, dim=2, train_size=0.8, train_batch_size=8, convert_to_tensor=True, custom_train_min_time=None, custom_train_max_time=None)
 
-torch.save(data_obj["train_dataloader"], f'train_dataloader.pth')
-torch.save(data_obj["test_dataloader"], f'test_dataloader.pth')
-torch.save(data_obj["val_dataloader"], f'val_dataloader.pth')
-torch.save(data_obj["train_data_combined"], f'train_data_combined.pth')
-torch.save(data_obj["val_data_combined"], f'val_data_combined.pth')
-torch.save(data_obj["test_data_combined"], f'test_data_combined.pth')
-np.save(f'total_objIds.npy', data_obj["total_objIds"])
-np.save(f'train_objIds.npy', data_obj["train_objIds"])
-np.save(f'val_objIds.npy', data_obj["val_objIds"])
-np.save(f'test_objIds.npy', data_obj["test_objIds"])
-#np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
-np.save(f'total_common_finkclasses.npy', data_obj["total_common_finkclasses"])
-np.save(f'duration_lcs.npy', data_obj["duration_lcs"])
-np.save(f"num_datapoints_lcs.npy", data_obj["seq_len_all"])
-np.save(f'min_max_magdiffs.npy', data_obj['min_max_magdiffs'])
-np.save(f'min_max_mags.npy', data_obj['min_max_mags'])
-np.save(f'train_val_test_min_max_times.npy', data_obj['train_val_test_min_max_times'])
-np.save(f'train_min_max_times.npy', data_obj['train_min_max_times'])
+if not CUSTOM_TRAIN_TIMES:
+    torch.save(data_obj["train_dataloader"], f'train_dataloader_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["test_dataloader"], f'test_dataloader_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["val_dataloader"], f'val_dataloader_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["train_data_combined"], f'train_data_combined_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["val_data_combined"], f'val_data_combined_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["test_data_combined"], f'test_data_combined_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    np.save(f'total_objIds_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["total_objIds"])
+    np.save(f'train_objIds_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["train_objIds"])
+    np.save(f'val_objIds_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["val_objIds"])
+    np.save(f'test_objIds_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["test_objIds"])
+    #np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
+    np.save(f'total_common_finkclasses_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["total_common_finkclasses"])
+    np.save(f'duration_lcs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["duration_lcs"])
+    np.save(f'num_datapoints_lcs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["seq_len_all"])
+    np.save(f'min_max_magdiffs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['min_max_magdiffs'])
+    np.save(f'min_max_mags_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['min_max_mags'])
+    np.save(f'train_val_test_min_max_times_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['train_val_test_min_max_times'])
+    np.save(f'train_min_max_times_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['train_min_max_times'])
+else:
+    torch.save(data_obj["test_dataloader"], f'test_dataloader_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.pth')
+    torch.save(data_obj["test_data_combined"], f'test_{TOPIC_PATH.split("/")[-1].replace("-", "_")}_data_combined.pth')
+    np.save(f'test_{TOPIC_PATH.split("/")[-1].replace("-", "_")}_objIds.npy', data_obj["total_objIds"])
+    #np.save('total_objIds_encoded.npy', data_obj["total_objIds_encoded"])
+    np.save(f'total_common_finkclasses_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["total_common_finkclasses"])
+    np.save(f'duration_lcs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["duration_lcs"])
+    np.save(f'num_datapoints_lcs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj["seq_len_all"])
+    np.save(f'min_max_magdiffs_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['min_max_magdiffs'])
+    np.save(f'min_max_mags_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['min_max_mags'])
+    np.save(f'train_val_test_min_max_times_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['train_val_test_min_max_times'])
+    np.save(f'train_min_max_times_{TOPIC_PATH.split("/")[-1].replace("-", "_")}.npy', data_obj['train_min_max_times'])
+
 """
 # Now save the finkclass for each objectId. The most common finkclass of all alerts of that object is taken.
 # [0] because we assume only one finkclass will have the maximum occurence.

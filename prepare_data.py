@@ -254,8 +254,9 @@ class apply_truncate_transform_random:
         return self.truncate_transform(x) if torch.rand(1) < self.p else x
 
 
-def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False):
+def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False, custom_train_min_time=None, custom_train_max_time=None):
     """
+    Pass in `custom_train_min_time` and `custom_train_max_time` if applying on totally new set of polled alerts. In that case, set this to thecorresponding to training.
     """
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = 'cpu'  # We don't require GPU fr preparing the data but only for training.
@@ -325,14 +326,17 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
         if i == 5:
             break
         print(td[1][-1])
- 
-    # Find the min and max times for train, val, and test sets.
-    train_min_time = np.min([td[1].min() for td in train_data])
-    train_max_time = np.max([td[1].max() for td in train_data])
-    val_min_time = np.min([td[1].min() for td in val_data])
-    val_max_time = np.max([td[1].max() for td in val_data])
-    test_min_time = np.min([td[1].min() for td in test_data])
-    test_max_time = np.max([td[1].max() for td in test_data])
+
+    if custom_train_min_time is not None and custom_train_max_time is not None:
+        # Find the min and max times for train, val, and test sets.
+        train_min_time = np.min([td[1].min() for td in train_data])
+        train_max_time = np.max([td[1].max() for td in train_data])
+        val_min_time = np.min([td[1].min() for td in val_data])
+        val_max_time = np.max([td[1].max() for td in val_data])
+        test_min_time = np.min([td[1].min() for td in test_data])
+        test_max_time = np.max([td[1].max() for td in test_data])
+    else:
+        train_min_time, train_max_time, val_min_time, val_max_time, test_min_time, test_max_time = custom_train_min_time, custom_train_max_time, custom_train_min_time, custom_train_max_time, custom_train_min_time, custom_train_max_time
 
     print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the train dataset: {train_max_time}, {train_min_time}')
     print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the val dataset: {val_max_time}, {val_min_time}')
@@ -583,4 +587,164 @@ def prepare_data_old(df_alerts, dim=2, train_size=0.8, train_batch_size=32):
         "input_dim": dim
     }
     return data_obj
- 
+
+
+def prepare_data_graph_test(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False, custom_train_min_time=None, custom_train_max_time=None):
+    """
+    Pass in `custom_train_min_time` and `custom_train_max_time` if applying on totally new set of polled alerts. In that case, set this to the values corresponding to training.
+    """
+    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'  # We don't require GPU fr preparing the data but only for training.
+    time_in_hrs = True
+
+    # Since we aim to do global time normalization, we first need to find the max and min times (the absolute values and not the no. of datapoints) across the entire dataset. **NOTE: This loop should NOT be used if applying the model on a totally new data instance since we must use the min_time/max_time calculated during training and not calculate it again.**
+    # FIRST, we do the loop only to find the min/max times across the dataset. Then the second loop performs the global time normalization using the max time found in the first loop.
+    # min_max_mags to store the min/max mag so that these values can be used to unnormalize the light curves later. This is because mag normalization is locally done for each lc. We don't need to save the min/max values for the time (x-axis) since time is normalized globally, so a singel value across the dataset suffices.
+    min_time, max_time, duration_lcs, min_max_magdiffs, min_max_mags = np.Inf, -np.Inf, [], [], []
+    for objId in df_alerts['objectId'].unique():
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, max_time=None, min_time=None, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        assert lc_data[0] == objId
+        #assert lc_data[1][0] == 0.0  # Because lc_data[1] is the time array and it must start with zero because we use make_first_time_zero=True above.
+        if lc_data[1][0].numpy()[0] < min_time:
+            min_time = lc_data[1][0].numpy()[0]
+        if lc_data[1][-1].numpy()[0] > max_time:
+            max_time = lc_data[1][-1].numpy()[0]
+        duration_lcs.append(float(lc_data[1][-1] - lc_data[1][0]))
+        _lc_data_obs = lc_data[2]
+        min_max_magdiffs.append(_lc_data_obs.max() - _lc_data_obs[_lc_data_obs != 0.0].min())  # Ignoring zero values for min because zero values mean unobserved.
+        min_max_mags.append((objId, _lc_data_obs[_lc_data_obs != 0.0].min().item(), _lc_data_obs.max().item()))
+
+    #assert min_time = 0.0   # Because first time is always zero for all lcs because we use make_first_time_zero=True.
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the dataset: {max_time}, {min_time}')
+
+    total_data, total_objId, total_common_finkclasses = [], [], []
+    for objId in df_alerts['objectId'].unique():
+        # NOTE: It's important to note that here we use normalize_times=False since we want min_time and max_time calculated on the specific dataset (train, val, OR test), just as done in mTAN phyionet data preprocessing. This normalization is done in variable_time_collate_fn.
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, local_time_normalization=False, max_time=max_time, min_time=min_time, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        total_data.append(lc_data)
+        assert lc_data[0] == objId
+        total_objId.append(objId)
+        total_common_finkclasses.append(lc_data[-1])
+
+    ################################################
+    # Add cases manually. Currently we only add TDEs
+    # EDIT: We don't need this since I am adding these cases in the processed alerts dataframe directly. Otherwise it becomes difficult to access these alerts for post-testing analysis
+    #tns_tde_total_data, tns_tde_total_objId, tns_tde_total_common_finkclasses = add_tns_tde()
+    #total_data.extend(tns_tde_total_data)
+    #total_objId.extend(tns_tde_total_objId)
+    #total_common_finkclasses.extend(tns_tde_total_common_finkclasses)
+    ################################################
+
+    #data_min, data_max = get_data_min_max(total_data)
+    #print(f'data_min, data_max: {data_min, data_max}')
+    #data_min, data_max = data_min.to(device), data_max.to(device)
+    data_min, data_max = None, None  # Since we don't use min/max calculated across the entire train/val/test dataset.
+
+    # TODO: should we use stratified split? stratifying based on the most common finkclass across all alerts of a given objId --> can do for classification, not required for unsupervised learning.
+    # TODO: Ensure that using random_state=42 and shuffle=True gives the same output since I am using train_test_independently for splitting the data and the objIds.
+    # ensure multiple runs of label encoding on the same number gives the same encoded value. UPDATE: Not applicable now since we are not encoding the labels anymore.
+    # We are encoding the objectIds just for efficiency because string types may not be efficient with PyTorch.
+    # NOTE: I commented the below two lines since I am thinking the labels need NOT be encoded, and can keep it as strings only.
+    #le = preprocessing.LabelEncoder()
+    #total_objId_encoded = le.fit_transform(total_objId)  # use le.inverse_transform to get the string from the encoded value.
+
+    #train_data, test_data, train_data_objId, test_data_objId = train_test_split(total_data, total_objId, train_size=train_size, random_state=42, shuffle=True)
+    #train_data, val_data, train_data_objId, val_data_objId = train_test_split(train_data, train_data_objId, train_size=0.8, random_state=42, shuffle=True)
+
+    #print('DEBUG: train_data and test_data last time printing for a few cases.')
+    #for i, td in enumerate(train_data):
+    #    if i == 5:
+    #        break
+    #    print(td[1][-1])
+
+    #for i, td in enumerate(test_data):
+    #    if i == 5:
+    #        break
+    #    print(td[1][-1])
+
+    if custom_train_min_time is None or custom_train_max_time is None:
+        # Find the min and max times for train, val, and test sets.
+        train_min_time = np.min([td[1].min() for td in train_data])
+        train_max_time = np.max([td[1].max() for td in train_data])
+        val_min_time = np.min([td[1].min() for td in val_data])
+        val_max_time = np.max([td[1].max() for td in val_data])
+        test_min_time = np.min([td[1].min() for td in test_data])
+        test_max_time = np.max([td[1].max() for td in test_data])
+    else:
+        train_min_time, train_max_time, val_min_time, val_max_time, test_min_time, test_max_time = custom_train_min_time, custom_train_max_time, custom_train_min_time, custom_train_max_time, custom_train_min_time, custom_train_max_time
+
+    print(f'Max and Min time values (in {"days" if not time_in_hrs else "hrs"}) across the train dataset: {train_max_time}, {train_min_time}')
+
+    data_combined, data_Ids = variable_time_collate_fn(total_data, device, classify=classify, activity=activity, data_min=data_min, data_max=data_max, train_min_time=train_min_time, train_max_time=train_max_time)
+
+    assert np.all(total_objId == data_Ids)
+
+    # Q) Instead of inserting zero in the observed values array where no observed value exists, is it better to put a sufficient low mag instead, like 25?
+    # Answer: I have confirmed that training, validation, and testing does NOT get affected by keeping unobserved values as 0 or 23 because these are essentially masked anyways.
+
+    print(data_combined.shape, len(data_Ids))
+
+    print(f'data_combined.shape: {data_combined.shape}')#, val_data_combined.shape, test_data_combined.shape: {train_data_combined.shape, val_data_combined.shape, test_data_combined.shape}')
+
+    ##### A quick check #####
+    seq_len_all = []  # stores the sequence length of all light curves.
+    for objId in df_alerts['objectId'].unique():
+        pdf = df_alerts[df_alerts['objectId'] == objId]
+        seq_len_all.append(len(pdf))
+
+    max_seq_len = max(seq_len_all)  # max_seq_len does not denote the maximum time duration, i.e., if max_seq_len = 60, it doesn't mean 60 hours/minutes.
+    print(f'Max. sequence length (or the max no. of datapoints of lightcurves) in the dataset (max_seq_len): {max_seq_len}')
+    assert max_seq_len == data_combined.shape[1]
+    #########################
+
+    # Create a tensor dataset just for the sake of storing the objectIds corresponding to each light curve, which may be helpful downstream. Especially for analysis while testing.
+    #print(train_data_objId)
+    #print(train_data_combined.shape)
+    #train_data_combined = Dataset(train_data_combined, train_data_objId)
+    #val_data_combined = Dataset(val_data_combined, val_data_objId)
+    #test_data_combined = Dataset(test_data_combined, test_data_objId)
+
+    # Below four lines added latest by me.
+    #transform = SemiRandomTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.5), p=0.5, dim=dim, min_datapoints_each_filter=10)
+    #transform = SemiRandomContinuousTruncateLightCurve(n_to_sample_range=(6, 20), p=0.5, dim=2, min_datapoints_each_filter=10)
+    #transform = apply_truncate_transforms_random(
+    #    ContinuousTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+    #    TruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+    #    p=0.5
+    #)
+
+    #transform = apply_truncate_transform_random(
+    #    ContinuousTruncateLightCurve(percentage_tp_to_sample_range=(0.3, 0.7), dim=dim, min_datapoints_each_filter=10),
+    #    p=0.5
+    #)
+    test_dataset = MyDataSet(data_combined, data_Ids, transform=None)
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=2, shuffle=False)
+
+    # Since total_common_finkclass may be heterogenous, we pad them just for convenience before saving as an numpy array.
+    # Credit for below code: https://stackoverflow.com/a/43146373
+    # TODO: Padding can be avoided if you use np.savez. Can keep total_common_finkclasses as a list here and in the main_processing.py, can use np.savez instead. LOW_PRIORITY
+    pad = len(max(total_common_finkclasses, key=len))
+    total_common_finkclasses = np.array([i + [0]*(pad-len(i)) for i in total_common_finkclasses])
+
+    #train_data_objId_raw = le.inverse_transform(train_data_objId)
+    #val_data_objId_raw = le.inverse_transform(val_data_objId)
+    #test_data_objId_raw = le.inverse_transform(test_data_objId)
+
+    data_obj = {
+        #"final_data": np.array(total_data),  # This may give error since total_data is a list containing variable length entries.
+        "duration_lcs": np.array(duration_lcs),
+        "seq_len_all": np.array(seq_len_all),
+        "min_max_mags": np.array(min_max_mags),
+        "min_max_magdiffs": np.array(min_max_magdiffs),
+        "total_objIds": np.array(total_objId),
+        "test_data_combined": data_combined,
+        #"total_objIds_encoded": np.array(total_objId_encoded),
+        "total_common_finkclasses": total_common_finkclasses,
+        "test_dataloader": test_loader,
+        "input_dim": dim,
+        "train_val_test_min_max_times": np.array([train_min_time, train_max_time, val_min_time, val_max_time, test_min_time, test_max_time]),
+        "train_min_max_times": np.array([train_min_time, train_max_time])
+    }
+
+    return data_obj
+
