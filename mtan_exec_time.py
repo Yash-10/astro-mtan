@@ -116,6 +116,11 @@ if __name__ == '__main__':
         #    assert torch.all(observed_tp == subsampled_tp)
 
         _times = []
+        # NOTE: This approach of iterating multiple times over a single batch can have first iteration
+        # to be slower than the rest due to cache. Taking the median should tackle this problem.
+        # An alternative is to run iterations over the entire test data multiple times rather than on
+        # a single batch multiple times -- cutting and pasting `for _ in range(5):` before `for batch in test_loader:`.
+        # I checked that this approach only added <=1 sec overhead, so likely the median calculation is solving that issue.
         for _ in range(5):
             start = time.time()
             query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
