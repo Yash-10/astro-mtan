@@ -79,7 +79,6 @@ if __name__ == '__main__':
         rec = models.enc_mtan_rnn(
             dim, args.latent_dim, args.rec_hidden,   # torch.linspace(0, 1., args.num_ref_points)
             embed_time=args.embed_time, learn_emb=args.learn_emb, num_heads=args.enc_num_heads, device=device).to(device)
-
     if args.dec == 'rnn3':
         dec = models.dec_rnn3(
             dim, torch.linspace(0, 1., args.num_ref_points), args.latent_dim, 

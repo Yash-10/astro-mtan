@@ -122,8 +122,9 @@ if __name__ == '__main__':
         # a single batch multiple times -- cutting and pasting `for _ in range(5):` before `for batch in test_loader:`.
         # I checked that this approach only added <=1 sec overhead, so likely the median calculation is solving that issue.
         for _ in range(5):
-            start = time.time()
+            #start = time.time()
             query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
+            start = time.time()
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             end = time.time()
             _times.append(end - start)

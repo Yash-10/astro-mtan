@@ -29,9 +29,14 @@ dim = 2
 seed = 42
 store_decoded_lcs = True
 # NOTE: Change the `SETTING` based on which dataset to evaluate the model on.
-SETTING = 'test'   # 'test', 'train', or 'val', or 'OOD_test', or 'test_ftransfer_ztf_2026_02_01_378646'. The second-last option is for totally new custom data. See `OOD_evaluate_unsupervised_prepare_data.py`. The last option is for the graph-based test.
+SETTING = 'test'
+#SETTING = 'OOD_test'   # 'test', 'test_CORRECTED','train', or 'val', or 'OOD_test', or 'test_ftransfer_ztf_2026_02_01_378646'. The second-last option is for totally new custom data. See `OOD_evaluate_unsupervised_prepare_data.py`. The last option was for the graph-based classification test but we didn't end up doing that in detail, so that option has no meaning. For the change of running on corrected magnitudes, set DATA_COMBINED_PATH to "test_data_combined_ftransfer_ztf_2025_05_31_430518_CORRECTED.pth" AND SETTING to "test_CORRECTED", for example. Note that this separate data file wouldn't have been needed had I also polled the reference fields (magnr, distnr, isdiffpos, etc) in my polling of alerts. The reason for creating this separate data file was because I didn't poll those fields earlier, so I polled again for the same data range and filters, but focusing on these additional fields.
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
+if SETTING == 'test_CORRECTED':
+    DATA_COMBINED_PATH = 'test_data_combined_ftransfer_ztf_2025_05_31_430518_CORRECTED.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
+if SETTING == 'test_CORRECTED':
+    DATA_IDS_PATH = 'test_objIds_ftransfer_ztf_2025_05_31_430518_CORRECTED.npy'
 model_file_path = 'ftransfer_ztf_2025-05-31_430518_mtan_rnn_mtan_rnn_Jul27_298.h5'
 
 

@@ -254,10 +254,93 @@ class apply_truncate_transform_random:
         return self.truncate_transform(x) if torch.rand(1) < self.p else x
 
 
-def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False, custom_train_min_time=None, custom_train_max_time=None):
+### Added code for the AGN truncation experiment on the test set
+class TruncateFirstXMonthsLightCurve(object):
+    """Keeps only the first X months of a light curve by removing all time points
+    that fall outside [0, truncate_months/max_time_months] in normalized time.
+    Always returns the truncated light curve, even if fewer than
+    min_datapoints_each_filter points remain after truncation.
+
+    Args:
+        truncate_months (float): Number of months to truncate from the start.
+        min_time_months (float): Total time span corresponding to observed_tp=0.0, in months.
+        max_time_months (float): Total time span corresponding to observed_tp=1.0, in months.
+        dim (int): Number of data dimensions (e.g. 2 for g and r bands).
+        min_datapoints_each_filter (int): Minimum datapoints per filter to apply truncation.
+            If not met on the ORIGINAL LC, return original x unchanged.
+    """
+    def __init__(self, truncate_months, max_time_months, min_time_months, dim=2, min_datapoints_each_filter=10):
+        if truncate_months <= 0:
+            raise ValueError("`truncate_months` must be positive.")
+        total_span_months = max_time_months - min_time_months
+        if truncate_months >= total_span_months:
+            raise ValueError("`truncate_months` must be less than total span (max_time - min_time).")
+
+        self.truncate_threshold = truncate_months / total_span_months
+        self.truncate_months = truncate_months
+        self.dim = dim
+        self.min_datapoints_each_filter = min_datapoints_each_filter
+
+    def __call__(self, x):
+        # Shape of x: (num_points, dim + dim + 1)
+        # Columns: [observed_data (dim) | observed_mask (dim) | observed_tp (1)]
+        observed_mask = x[:, self.dim:2 * self.dim]
+        observed_tp   = x[:, -1]
+
+        # Only check min_datapoints on the ORIGINAL LC before truncation
+        if torch.any(observed_mask.sum(0) < self.min_datapoints_each_filter):
+            return x
+
+        # Keep only time points WITHIN the first X months
+        keep_mask = observed_tp <= self.truncate_threshold
+        truncated_x = x[keep_mask]
+
+        return truncated_x
+
+
+def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify=False, activity=False, convert_to_tensor=False, custom_train_min_time=None, custom_train_max_time=None, magpsf_column='magpsf', sigmapsf_column='sigmapsf'):#, truncate_agn_months=None):#, remove_less_than_3months_agns=False, truncate_agn_months=None):
     """
     Pass in `custom_train_min_time` and `custom_train_max_time` if applying on totally new set of polled alerts. In that case, set this to thecorresponding to training.
     """
+    """
+    if remove_less_than_3months_agns:
+        print('Removing AGNs with <3months duration')
+        print(f'No. of objectIds before <3month removal: {len(df_alerts["objectId"].unique())}')
+        # Remove AGNs where the time difference between the first and last alert < 91 days
+        durations = df_alerts.groupby('objectId')['jd'].transform(lambda x: x.max() - x.min())
+        to_drop_mask = (df_alerts['finkclass'] == 'custom_agn') & (durations < 91)
+        df_alerts = df_alerts[~to_drop_mask]
+        #df_alerts = df_alerts.groupby('objectId').filter(
+        #    lambda x: (x['jd'].max() - x['jd'].min()) > 91
+        #)
+        print(f'No. of objectIds after <3month removal: {len(df_alerts["objectId"].unique())}')
+
+
+    if truncate_agn_months is not None:
+        print(f"Truncating AGNs to first {truncate_agn_months} months...")
+        print(f'No. of objectIds before truncation: {len(df_alerts["objectId"].unique())}')
+
+        # Calculate t0 (first detection) for every object
+        t0s = df_alerts.groupby('objectId')['jd'].transform('min')
+
+        # Define limit (X months converted to days)
+        limit_days = truncate_agn_months * 30.
+
+        # Logic: KEEP row if (NOT an AGN) OR (IS an AGN and current_time <= t0 + limit)
+        is_agn = (df_alerts['finkclass'] == 'custom_agn')
+        within_time = (df_alerts['jd'] <= (t0s + limit_days))
+
+        # Apply the filter: We keep it if it's NOT an AGN, or if it IS an AGN within the window
+        df_alerts = df_alerts[~is_agn | within_time].copy()
+
+        print(f'No. of objectIds after truncation of {truncate_agn_months} months: {len(df_alerts["objectId"].unique())}')
+    """
+    durations = df_alerts.groupby('objectId')['jd'].transform(lambda x: x.max() - x.min())
+    short_agns_mask = (df_alerts['finkclass'] == 'custom_agn') & (durations < 91)
+    agns_with_less_than_3months_ids = np.array(df_alerts[short_agns_mask]['objectId'].unique())
+    np.save('agns_with_less_than_3months_ids.npy', agns_with_less_than_3months_ids)
+    print(f'{len(agns_with_less_than_3months_ids)} AGNs with <=3 months, saved to agns_with_less_than_3months_ids.npy')
+
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = 'cpu'  # We don't require GPU fr preparing the data but only for training.
     time_in_hrs = True
@@ -267,7 +350,7 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     # min_max_mags to store the min/max mag so that these values can be used to unnormalize the light curves later. This is because mag normalization is locally done for each lc. We don't need to save the min/max values for the time (x-axis) since time is normalized globally, so a singel value across the dataset suffices.
     min_time, max_time, duration_lcs, min_max_magdiffs, min_max_mags = np.Inf, -np.Inf, [], [], []
     for objId in df_alerts['objectId'].unique():
-        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, max_time=None, min_time=None, time_in_hrs=time_in_hrs)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
+        lc_data = get_lc(df_alerts, objId, make_first_time_zero=True, convert_to_tensor=convert_to_tensor, normalize_times=False, max_time=None, min_time=None, time_in_hrs=time_in_hrs, magpsf_column=magpsf_column, sigmapsf_column=sigmapsf_column)  # returns a tuple (object_Id, tt, vals, mask, labels). objectId will be a string, no. of entries/rows in tt, vals, and mask will be `n` = the total no. of alerts (including all bands) for that objectId
         assert lc_data[0] == objId
         #assert lc_data[1][0] == 0.0  # Because lc_data[1] is the time array and it must start with zero because we use make_first_time_zero=True above.
         if lc_data[1][0].numpy()[0] < min_time:
@@ -396,6 +479,18 @@ def prepare_data(df_alerts, dim=2, train_size=0.7, train_batch_size=32, classify
     )
     train_dataset = MyDataSet(train_data_combined, train_data_Ids, transform=transform)
     val_dataset = MyDataSet(val_data_combined, val_data_Ids, transform=None)
+    """
+    ### Added code for AGN truncation experiment
+    train_val_test_min_max_times = np.load('train_val_test_min_max_times.npy')
+    train_min_time, train_max_time = train_val_test_min_max_times[0], train_val_test_min_max_times[1]
+
+    _test_transform_experiment = TruncateFirstXMonthsLightCurve(
+        truncate_months=6,
+        max_time_months=train_max_time/(24 * 30),
+        min_time_months=train_min_time/(24 * 30),
+        dim=2,
+    )
+    """
     test_dataset = MyDataSet(test_data_combined, test_data_Ids, transform=None)
 
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, num_workers=2, shuffle=True)
