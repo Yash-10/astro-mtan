@@ -1,6 +1,6 @@
 # mTAN for astronomical light curves
 
-Code implementing the Multi-Time Attention Network (mTAN) for application on astronomical alert light curves. This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN). Here we focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training)). This code accompanies our paper: TODO
+Code implementing the Multi-Time Attention Network (mTAN) for application on astronomical light curves. This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN). Here we focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training)). This code accompanies our paper: TODO
 
 ![mTAND-schema](https://github.com/Yash-10/astro-mtan/blob/main/mTAND_schema.png)
 
@@ -43,7 +43,7 @@ python main_preprocessing.py
 ```
 
 - This will preprocess the alert folders, prepare the data, split it into train-val-test sets, and save the train and test dataloader as files, along with some other things required for training the model (step 2 below).
-- Set `TOPIC_PATH` to your alert folder path; the alert folder is obtained from [Fink's Data Transfer Service for ZTF](https://ztf.fink-portal.org/download). Details of all parameters used for polling our alerts are mentioned in our paper.
+- Set `TOPIC_PATH` to your alert folder path; the alert folder is obtained from [Fink's Data Transfer Service for ZTF](https://ztf.fink-portal.org/download). Details of all parameters used to poll our alerts are provided in our paper.
 
 
 ### 2. Train the unsupervised model
@@ -80,10 +80,10 @@ rec_hidden = 64
 gen_hidden = 50
 ...
 ```
-- Set `SETTING` to an appropriate string value; available options are commented inside the python script itself. `SETTING = "test"` leads to the test results without any light curve correction applied before evaluation (used for SNe light curves) and `SETTING = "test_CORRECTED"` leads to the test results with light curve correction applied before evaluation (used for AGN light curves).
+- Set `SETTING` to an appropriate string value; available options are commented inside the Python script itself. `SETTING = "test"` leads to the test results without any light curve correction applied before evaluation (used for SNe light curves), and `SETTING = "test_CORRECTED"` leads to the test results with light curve correction applied before evaluation (used for AGN light curves).
 
 **Details on light curve correction**
-- Light curve correction is not applied before training in our code, but only before evaluation, because the decision to correct light curves was made after training was completed. We needed to perform a separate polling of alerts from the Fink Data Transfer service (but with the same parameters as the original poll) to get additional fields required for correcting the light curves that were not present in our original poll. This created a new "corrected" version of the dataset. Although all light curves are corrected in this new data, for our analysis in `results.ipynb` we use the original (uncorrected) alerts for SN but use the new (corrected) alerts for AGN. Ideally, this correction can be applied before training too, which can be more consistent, but we didn't find the results to degrade even if correction was only applied during testing compared to the case of no correction for any light curve.
+- Light curve correction is not applied before training in our code, but only before evaluation, because the decision to correct light curves was made after training was completed. We needed to perform a separate polling of alerts from the Fink Data Transfer service (but with the same parameters as the original poll) to get additional fields required for correcting the light curves that were not present in our original poll. This created a new "corrected" version of the dataset. Although all light curves are corrected in this new data, for our analysis in `results.ipynb` we use the original (uncorrected) alerts for SN but use the new (corrected) alerts for AGN. Ideally, this correction can be applied before training, too, which can be more consistent, but we didn't find the results to degrade even if the correction was only applied during testing, compared to the case of no correction for any light curve.
 
 We performed the correction of the newly polled alerts using:
 
@@ -96,13 +96,13 @@ or directly running
 python3 correct_mags.py
 ```
 
-but given the above discussion, the correction can ideally be incorporated within code in step 1 itself had our original polling of alerts included all the alert fields.
+But given the above discussion, the correction can ideally be incorporated within code in step 1 itself, had our original polling of alerts included all the alert fields.
 
 - The light curve correction itself is performed using the [`lc_correction`](https://github.com/alercebroker/lc_correction) library.
 
 ### 4. Analysis of results
 
-Go to `results.ipynb`. This notebook contains different aspects of the post-evaluation analysis, such as latent space visualization, interpolation, attention map visualization, and other plots, and are separated in different sections in the notebook.
+Go to `results.ipynb`. This notebook contains different aspects of the post-evaluation analysis, such as latent space visualization, interpolation, attention map visualization, and other plots, and is separated into different sections in the notebook.
 
 ### 4.1. Other tasks
 
