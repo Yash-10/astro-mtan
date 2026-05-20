@@ -2,7 +2,7 @@
 
 Code implementing the Multi-Time Attention Network (mTAN) for application on astronomical alert light curves. This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN). Here we focus on Supernovae (SNe) and AGN light curves for our main analysis but also showcase generalization to unseen classes (see TODO). This code accompanies our paper: TODO
 
-![mTAND-schema](TODO)
+![mTAND-schema](https://github.com/Yash-10/astro-mtan/blob/main/mTAND_schema.png)
 
 
 ## Installation
@@ -138,4 +138,4 @@ TODO
 
 ## License
 
-[MIT](TODO)
+[MIT](https://github.com/Yash-10/astro-mtan/blob/main/LICENSE)
