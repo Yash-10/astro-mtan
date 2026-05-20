@@ -1,6 +1,10 @@
 # mTAN for astronomical light curves
 
-Code implementing the Multi-Time Attention Network (mTAN) for application on astronomical light curves. This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN). This code accompanies our paper: TODO. We focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training))
+As sky surveys grow in scale and cadence, the ability to rapidly and automatically characterize astronomical time series becomes essential. The code here presents a simple and efficient method based on the Multi-Time Attention Network (mTAN) that learns time-aware latent representations of photometric light curves, with no imputation required for irregular or incomplete observations.
+
+This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN) and accompanies our paper: TODO. We focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training))
+
+The method is lightweight—it requires a few hundred kilobytes per model and is fast—the inference time is 0.01 seconds per light curve and scales as O(1) with observation count. This lightweight and scalable approach can be integrated into Rubin brokers to characterize time series at scale.
 
 ![mTAND-schema](https://github.com/Yash-10/astro-mtan/blob/main/mTAND_schema.png)
 
