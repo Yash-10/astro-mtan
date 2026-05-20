@@ -49,7 +49,7 @@ python main_preprocessing.py
 Use the SLURM script:
 
 ```bash
-bash train.sh
+sbatch train.sh
 ```
 
 Or run directly. An example usage is below:
@@ -61,7 +61,7 @@ python3 tan_unsupervised.py --niters 300 --lr 0.0001 --rec-hidden 64 --latent-di
 ### 3. Evaluate model outputs
 
 ```bash
-bash evaluate.sh
+sbatch evaluate.sh
 ```
 
 Or directly:
@@ -86,7 +86,7 @@ gen_hidden = 50
 We performed the correction of the newly polled alerts using:
 
 ```bash
-bash correct_mags.sh
+sbatch correct_mags.sh
 ```
 or directly running
 
@@ -109,7 +109,7 @@ Other tasks:
 Run the mTAN execution-time script:
 
 ```bash
-bash mtan_gp.sh
+sbatch mtan_gp.sh
 ```
 
 This executes `mtan_exec_time.py` or `gp_exec_time.py`, depending on what line is commented out in the bash script.
