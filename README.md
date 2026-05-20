@@ -2,6 +2,8 @@
 
 Code implementing the Multi-Time Attention Network (mTAN) for application on astronomical alert light curves. This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN). Here we focus on Supernovae (SNe) and AGN light curves for our main analysis but also showcase generalization to unseen classes (see TODO). This code accompanies our paper: TODO
 
+![mTAND-schema](TODO)
+
 
 ## Installation
 
@@ -102,7 +104,7 @@ but given the above discussion, the correction can ideally be incorporated withi
 
 Go to `results.ipynb`. This notebook contains different aspects of the post-evaluation analysis, such as latent space visualization, interpolation, attention map visualization, and other plots, and are separated in different sections in the notebook.
 
-Other tasks:
+### 4.1. Other tasks
 
 ### Measure inference execution time
 
@@ -117,7 +119,7 @@ This executes `mtan_exec_time.py` or `gp_exec_time.py`, depending on what line i
 
 ### Evaluation on classes unseen during training
 
-- First run 
+- First run:
 
 ```bash
 python3 OOD_evaluate_unsupervised_prepare_data.py
@@ -126,3 +128,14 @@ to get and save data for three new classes: Tidal Disruption Events (TDEs), Long
 
 Then change the `SETTING` to `"OOD_test"` and run exactly as step 3 above ("Evaluate model outputs").
 
+## Citation
+
+If you use this code in your work, please cite our paper:
+
+```
+TODO
+```
+
+## License
+
+[MIT](TODO)
