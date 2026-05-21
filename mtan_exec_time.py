@@ -13,7 +13,7 @@ import time
 import utils
 
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')  # Force to use CPU for evaluation since that closely mimics how the model will be used in real applications.
+device = torch.device('cuda')
 # TODO: Add option to pass these arguments as argument parsers. These values must match from training. So instead save a training parameter file and simply load it here.
 ref_resolution_days = 2
 latent_dim = 2
@@ -33,7 +33,7 @@ SETTING = 'test'   # 'test', 'train', or 'val', or 'OOD_test'. The last option i
 DATA_COMBINED_PATH = f'{SETTING}_data_combined.pth'
 DATA_IDS_PATH = f'{SETTING}_objIds.npy'
 model_file_path = 'ftransfer_ztf_2025-05-31_430518_mtan_rnn_mtan_rnn_Jul27_298.h5'
-batch_size = 32
+batch_size = 1
 
 if __name__ == '__main__':
     # Set seed during testing as well since this script samples random values for the variable, epsilon.
@@ -42,6 +42,7 @@ if __name__ == '__main__':
 
     if device == 'cuda':
         torch.cuda.manual_seed(seed)
+        print(torch.cuda.get_device_name(0))
 
     data_combined = torch.load(DATA_COMBINED_PATH, map_location=torch.device(device))
     data_Ids = np.load(DATA_IDS_PATH)
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     dec.load_state_dict(model_file['dec_state_dict'])
 
     # Efficient decoder
-    dec = torch.compile(dec, mode="reduce-overhead")
+    #dec = torch.compile(dec, mode="reduce-overhead")
 
     dec.eval()
 
@@ -122,9 +123,8 @@ if __name__ == '__main__':
         # a single batch multiple times -- cutting and pasting `for _ in range(5):` before `for batch in test_loader:`.
         # I checked that this approach only added <=1 sec overhead, so likely the median calculation is solving that issue.
         for _ in range(5):
-            #start = time.time()
-            query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
             start = time.time()
+            query = utils.generate_query_matrix(subsampled_tp, delta_t, padding_value=-999)
             out = rec(torch.cat((subsampled_data, subsampled_mask), 2), subsampled_tp, query)
             end = time.time()
             _times.append(end - start)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
         num_obs = observed_mask.sum(-1).sum(-1)
         times.append(median_exec_time)
-        num_obs_arr.append(num_obs.numpy())
+        num_obs_arr.append(num_obs.cpu().numpy())
         ids.append(batch[1])
         #times.append([batch[1], median_exec_time, num_obs.numpy()])
 
@@ -153,8 +153,12 @@ if __name__ == '__main__':
 
     #end = time.time()
     #print(end-start)
-    print(np.sum(times))
+    # This is the time reported for the batch_size = 32 case in the paper
+    print('Total time required = ', np.sum(times))
     if batch_size == 1:
         ids = [i[0] for i in ids]
         num_obs_arr = [float(i) for i in num_obs_arr]
+    print(np.array(ids).shape, np.array(times).shape, np.array(num_obs_arr).shape)
+    # NOTE: The below will give a shape mismatch error for any batch size other than 1
+    # But that's understandable, so if using batch size > 1, see the time printed above.
     np.save(f'mtan_exec_time_vs_nobs_{batch_size}.npy', np.vstack((ids, times, num_obs_arr)))
