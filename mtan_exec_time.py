@@ -40,7 +40,7 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    if device == 'cuda':
+    if device.type == 'cuda':
         torch.cuda.manual_seed(seed)
         print(torch.cuda.get_device_name(0))
 
