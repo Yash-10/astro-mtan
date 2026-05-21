@@ -100,7 +100,7 @@ or directly running
 python3 correct_mags.py
 ```
 
-But given the above discussion, the correction can ideally be incorporated within code in step 1 itself, had our original polling of alerts included all the alert fields.
+But given the above discussion, the correction can ideally be incorporated within the code in step 1 itself, had our original polling of alerts included all the alert fields.
 
 - The light curve correction itself is performed using the [`lc_correction`](https://github.com/alercebroker/lc_correction) library.
 
@@ -130,7 +130,7 @@ python3 OOD_evaluate_unsupervised_prepare_data.py
 ```
 to get and save data for three new classes: Tidal Disruption Events (TDEs), Long-period variables, and RR Lyrae (the latter two types of light curves are corrected, whereas TDEs are kept uncorrected). We use Fink's API service for this, which gives the full light curves, and predefine the ZTF object IDs to retrieve.
 
-Then change the `SETTING` to `"OOD_test"` and run exactly as step 3 above ("Evaluate model outputs").
+Then follow step 3 above ("Evaluate model outputs"), but change the `SETTING` to `"OOD_test"` before running.
 
 ## Citation
 
