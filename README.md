@@ -8,6 +8,15 @@ The method is lightweight—it requires a few hundred kilobytes per model and is
 
 ![mTAND-schema](https://github.com/Yash-10/astro-mtan/blob/main/mTAND_schema.png)
 
+## Data info
+To get the list of all ZTF object IDs used in the study or those used for training, validation, and testing separately, simply read:
+
+```py
+np.load('total_objIds.npy')
+np.load('train_objIds.npy')
+np.load('val_objIds.npy')
+np.load('test_objIds.npy')
+```
 
 ## Installation
 
