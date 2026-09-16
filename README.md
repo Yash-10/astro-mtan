@@ -2,9 +2,9 @@
 
 As sky surveys grow in scale and cadence, the ability to rapidly and automatically characterize astronomical time series becomes essential. The code here presents a simple and efficient method based on the Multi-Time Attention Network (mTAN) that learns time-aware latent representations of photometric light curves, with no imputation required for irregular or incomplete observations.
 
-This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN) and accompanies our paper: TODO. We focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training))
+This repository is a modified clone of the original mTAN code: [`reml-lab/mTAN`](https://github.com/reml-lab/mTAN) and accompanies our paper: [arXiv link](https://arxiv.org/abs/2605.24095). We focus on Supernovae (SNe) and AGN light curves for our main analysis, but also showcase generalization to unseen classes (see [Evaluation on classes unseen during training](https://github.com/Yash-10/astro-mtan#evaluation-on-classes-unseen-during-training))
 
-The method is lightweight—it requires a few hundred kilobytes per model and is fast—the inference time is 0.01 seconds per light curve and scales as O(1) with observation count. This lightweight and scalable approach can be integrated into Rubin brokers to characterize time series at scale.
+The method is lightweight—it requires a few hundred kilobytes per model and is fast—the inference time is 0.01 seconds per light curve on CPU and $3 \times 10^{-4}$ seconds on GPU, and scales as O(1) with observation count. This lightweight and scalable approach can be integrated into Rubin brokers to characterize time series at scale.
 
 ![mTAND-schema](https://github.com/Yash-10/astro-mtan/blob/main/mTAND_schema.png)
 
@@ -109,7 +109,7 @@ or directly running
 python3 correct_mags.py
 ```
 
-But given the above discussion, the correction can ideally be incorporated within code in step 1 itself, had our original polling of alerts included all the alert fields.
+But given the above discussion, the correction can ideally be incorporated within the code in step 1 itself, had our original polling of alerts included all the alert fields.
 
 - The light curve correction itself is performed using the [`lc_correction`](https://github.com/alercebroker/lc_correction) library.
 
@@ -139,14 +139,29 @@ python3 OOD_evaluate_unsupervised_prepare_data.py
 ```
 to get and save data for three new classes: Tidal Disruption Events (TDEs), Long-period variables, and RR Lyrae (the latter two types of light curves are corrected, whereas TDEs are kept uncorrected). We use Fink's API service for this, which gives the full light curves, and predefine the ZTF object IDs to retrieve.
 
-Then change the `SETTING` to `"OOD_test"` and run exactly as step 3 above ("Evaluate model outputs").
+Then follow step 3 above ("Evaluate model outputs"), but change the `SETTING` to `"OOD_test"` before running.
 
 ## Citation
 
 If you use this code in your work, please cite our paper:
 
 ```
-TODO
+@ARTICLE{2026arXiv260524095G,
+       author = {{Gondhalekar}, Yash and {M{\"o}ller}, Anais and {S{\'a}nchez-S{\'a}ez}, Paula},
+        title = "{Fast and Flexible Characterisation of Astronomical Light Curves Using Multi-Time Attention}",
+      journal = {arXiv e-prints},
+     keywords = {Instrumentation and Methods for Astrophysics, Astrophysics of Galaxies},
+         year = 2026,
+        month = may,
+          eid = {arXiv:2605.24095},
+        pages = {arXiv:2605.24095},
+          doi = {10.48550/arXiv.2605.24095},
+archivePrefix = {arXiv},
+       eprint = {2605.24095},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2026arXiv260524095G},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
 ```
 
 ## License
